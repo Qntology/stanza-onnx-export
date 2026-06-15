@@ -8,17 +8,30 @@ from utils import get_best_language
 PHONE_REGEX = re.compile(r'(\+?\d{1,3}[- ]?)?\(?\d{2,4}\)?[- ]?\d{3,4}[- ]?\d{4}')
 EMAIL_REGEX = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
 
-def extract_specific_pii(text, target_label, description):
-    """특정 카테고리의 PII 하나만 LLM에 요청 (350M 모델 최적화)"""
+def extract_specific_pii(text, target_label, description, keywords=None):
+    """특정 카테고리의 PII 하나만 LLM에 요청 (Stanza 힌트 활용)"""
     if model_manager.model is None:
         return []
 
-    # 지시사항을 극도로 단순화하여 오답 방지 (확신이 있을 때만 추출하도록 강조)
-    prompt = f"""<|start_of_role|>system<|end_of_role|>Task: Extract ONLY the real '{target_label}' ({description}) from the text.
+    # Stanza가 찾은 힌트가 있다면 프롬프트에 추가
+    hint_str = f"\nPotential Keywords: {', '.join(keywords)}" if keywords else ""
+
+    # 카테고리별 예시 제공 (한국어 사례 포함)
+    examples = {
+        "FIRSTNAME": "Text: '제 이름은 김철수입니다.' -> [{'word': '김철수', 'type': 'FIRSTNAME'}]",
+        "ADDRESS": "Text: '서울특별시 강남구 테헤란로 123길 45' -> [{'word': '서울특별시 강남구 테헤란로 123길 45', 'type': 'ADDRESS'}]",
+        "STATE": "Text: '경기도 성남시에 삽니다.' -> [{'word': '경기도', 'type': 'STATE'}]",
+        "CITY": "Text: '서울특별시 강남구' -> [{'word': '서울특별시', 'type': 'CITY'}, {'word': '강남구', 'type': 'CITY'}]",
+        "STREET": "Text: '판교역로 166 (삼성동)' -> [{'word': '판교역로 166', 'type': 'STREET'}]",
+        "ZIPCODE": "Text: '우편번호는 06655입니다.' -> [{'word': '06655', 'type': 'ZIPCODE'}]"
+    }
+    example_str = examples.get(target_label, "")
+
+    prompt = f"""<|start_of_role|>system<|end_of_role|>Extract ONLY '{target_label}' ({description}) from the text.
 Rules:
-1. Return JSON array: [{{"word": "actual_text", "type": "{target_label}"}}]
-2. If the text does NOT contain a real '{target_label}', return [].
-3. DO NOT guess. If unsure, return [].
+1. Return JSON array: [{{"word": "extracted_text", "type": "{target_label}"}}]
+2. Only use words present in the original text.{hint_str}
+3. Example: {example_str}
 <|start_of_role|>user<|end_of_role|>Text: {text}<|end_of_text|>
 <|start_of_role|>assistant<|end_of_role|>
 JSON:"""
@@ -35,6 +48,9 @@ JSON:"""
     
     response = model_manager.tokenizer.decode(outputs[0][inputs.input_ids.shape[-1]:], skip_special_tokens=True)
     
+    # 무시할 일반 단어 (Blacklist)
+    blacklist = {"PII content", "Hello", "Thank you", "Notice", "Project", "My office", "located at", "문의", "contact", "International"}
+    
     try:
         match = re.search(r'\[.*\]', response.strip(), re.DOTALL)
         if match:
@@ -43,12 +59,9 @@ JSON:"""
             for i in items:
                 if not isinstance(i, dict): continue
                 word = str(i.get('word', '')).strip()
-                # 필터링 조건: 
-                # 1. 원본 텍스트에 존재해야 함
-                # 2. 라벨 이름이나 placeholder가 아니어야 함
-                # 3. 길이가 1보다 커야 함
                 if (word in text and 
                     word.lower() not in [target_label.lower(), "found_text", "pii content", "extracted text"] and
+                    word not in blacklist and
                     not word.startswith("found_") and
                     len(word) > 1):
                     valid_items.append(i)
@@ -63,42 +76,54 @@ def process_pii(text, mask_char="*", minimize_address=False):
 
     main_lang, _ = get_best_language(text)
     
-    # 1. 텍스트 분할 (줄 단위/문장 단위)
-    nlp = model_manager.load_stanza(main_lang)
+    # --- [Step 1] Stanza 분석 (POS 힌트 추출) ---
+    nlp = model_manager.load_stanza(main_lang, processors='tokenize,pos')
+    units_data = []
     if nlp:
         doc = nlp(text)
-        units = [sent.text for sent in doc.sentences]
+        for sent in doc.sentences:
+            # PII 후보가 될 만한 고유명사, 명사, 숫자 추출
+            keywords = []
+            for word in sent.words:
+                if word.upos in ['PROPN', 'NOUN', 'NUM'] or word.xpos in ['nq', 'ncn', 'nnc']:
+                    keywords.append(word.text)
+            units_data.append({
+                "text": sent.text,
+                "keywords": list(set(keywords))
+            })
         model_manager.unload_stanza()
     else:
-        units = [line.strip() for line in text.split('\n') if line.strip()]
+        units_data = [{"text": line.strip(), "keywords": []} for line in text.split('\n') if line.strip()]
 
-    # 2. LLM 로드
+    # --- [Step 2] LLM 로드 및 PII 탐지 ---
     success, msg = model_manager.load_llm()
     if not success:
         return "LLM 로드 실패", "N/A", [], f"Error: {msg}"
     
     results = []
-    # 순차적으로 물어볼 카테고리 (더 구체적인 설명 추가)
     target_categories = [
         ("FIRSTNAME", "Individual person's name"),
-        ("STATE", "Province, State, or Do name like '경기도', 'California', 'CA'"),
-        ("CITY", "City, District, or Si/Gun/Gu name like '서울시', '성남시', 'San Francisco'"),
-        ("STREET", "Road name, Street address, or Building number like '판교역로 166', 'Market St 1234'"),
-        ("ZIPCODE", "Postal or Zip code like '13487', '94103'")
+        ("ADDRESS", "Full address string including City and Street"),
+        ("STATE", "Province, State, or Do name"),
+        ("CITY", "City, District, or Si/Gun/Gu name"),
+        ("STREET", "Road name or Street address"),
+        ("ZIPCODE", "Postal or Zip code")
     ]
 
-    # --- DOUBLE LOOP STRATEGY ---
-    for unit in units:
-        # A. 정규식 탐지 (전화번호, 이메일은 빠르므로 유지)
+    for data in units_data:
+        unit = data["text"]
+        keywords = data["keywords"]
+        
+        # A. 정규식 탐지 (전화번호, 이메일)
         for m in PHONE_REGEX.finditer(unit): results.append({"word": m.group(), "type": "PHONE"})
         for m in EMAIL_REGEX.finditer(unit): results.append({"word": m.group(), "type": "EMAIL"})
         
-        # B. 속성별 개별 LLM 탐지 (주소 등 복잡한 것들)
+        # B. LLM 탐지 (Stanza 힌트 전달)
         for label, desc in target_categories:
-            found = extract_specific_pii(unit, label, desc)
+            found = extract_specific_pii(unit, label, desc, keywords=keywords)
             results.extend(found)
 
-    # 3. 결과 정제 (중복 및 짧은 단어 제거)
+    # --- [Step 3] 결과 정제 및 마스킹 ---
     unique_results = []
     seen_words = set()
     for res in sorted(results, key=lambda x: len(str(x.get('word',''))), reverse=True):
@@ -107,12 +132,9 @@ def process_pii(text, mask_char="*", minimize_address=False):
             unique_results.append(res)
             seen_words.add(word)
 
-    # 4. 마스킹 적용
     masked_text = text
     final_entities = []
-    
-    # 주소 최소화 로직용 타겟
-    address_mask_targets = ["STREET", "ZIPCODE", "BUILDINGNUMBER"]
+    address_mask_targets = ["ADDRESS", "STREET", "ZIPCODE", "BUILDINGNUMBER"]
     address_expose_targets = ["CITY", "STATE", "COUNTY"]
 
     for res in unique_results:
@@ -123,10 +145,9 @@ def process_pii(text, mask_char="*", minimize_address=False):
             if word in masked_text:
                 masked_text = masked_text.replace(word, mask_char * len(word))
         elif minimize_address and p_type in address_expose_targets:
-            pass # 노출 유지
+            pass
         else:
-            # 기본 마스킹 (이름, 전화번호, 이메일 등)
             if word in masked_text:
                 masked_text = masked_text.replace(word, mask_char * len(word))
             
-    return masked_text, f"Main Lang: {main_lang}", final_entities, "✨ Detection Complete"
+    return masked_text, f"Main Lang: {main_lang}", final_entities, "✨ Hybrid Detection Complete"

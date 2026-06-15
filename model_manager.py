@@ -50,7 +50,7 @@ class ModelManager:
             self.tokenizer = None
             self._clear_vram()
 
-    def load_stanza(self, lang):
+    def load_stanza(self, lang, processors='tokenize,pos'):
         """Stanza를 로드 (VRAM 점유 최소화를 위해 CPU 사용)"""
         if self.current_stanza_lang == lang and self.stanza_pipeline is not None:
             return self.stanza_pipeline
@@ -59,12 +59,12 @@ class ModelManager:
         self.unload_llm()
         self.unload_stanza()
 
-        print(f"🚀 Loading Stanza ({lang}) on CPU to save VRAM...")
+        print(f"🚀 Loading Stanza ({lang}) with [{processors}] on CPU...")
         try:
             self.stanza_pipeline = stanza.Pipeline(
                 lang=lang, 
                 model_dir=STANZA_RESOURCES_DIR,
-                processors='tokenize', # pos 제거
+                processors=processors,
                 download_method=None,
                 use_gpu=False # CPU 사용
             )

@@ -1,0 +1,139 @@
+{
+  "ko": [
+    {
+      "text": "서울특별시",
+      "lemma": null,
+      "upos": "PROPN",
+      "xpos": "nq",
+      "feats": null
+    },
+    {
+      "text": "서초구",
+      "lemma": null,
+      "upos": "PROPN",
+      "xpos": "nq",
+      "feats": null
+    },
+    {
+      "text": "반포대로",
+      "lemma": null,
+      "upos": "ADV",
+      "xpos": "ncn+jca",
+      "feats": null
+    },
+    {
+      "text": "23길",
+      "lemma": null,
+      "upos": "NOUN",
+      "xpos": "nnc+nbu",
+      "feats": null
+    },
+    {
+      "text": "45",
+      "lemma": null,
+      "upos": "NUM",
+      "xpos": "nnc",
+      "feats": null
+    },
+    {
+      "text": "(",
+      "lemma": null,
+      "upos": "PUNCT",
+      "xpos": "sl",
+      "feats": null
+    },
+    {
+      "text": "삼성동",
+      "lemma": null,
+      "upos": "PROPN",
+      "xpos": "nq",
+      "feats": null
+    },
+    {
+      "text": ")",
+      "lemma": null,
+      "upos": "PUNCT",
+      "xpos": "sr",
+      "feats": null
+    }
+  ],
+  "en": [
+    {
+      "text": "1234",
+      "lemma": null,
+      "upos": "NUM",
+      "xpos": "CD",
+      "feats": "NumForm=Digit|NumType=Card"
+    },
+    {
+      "text": "Market",
+      "lemma": null,
+      "upos": "PROPN",
+      "xpos": "NNP",
+      "feats": "Number=Sing"
+    },
+    {
+      "text": "St",
+      "lemma": null,
+      "upos": "PROPN",
+      "xpos": "NNP",
+      "feats": "Number=Sing"
+    },
+    {
+      "text": ",",
+      "lemma": null,
+      "upos": "PUNCT",
+      "xpos": ",",
+      "feats": null
+    },
+    {
+      "text": "San",
+      "lemma": null,
+      "upos": "PROPN",
+      "xpos": "NNP",
+      "feats": "Number=Sing"
+    },
+    {
+      "text": "Francisco",
+      "lemma": null,
+      "upos": "PROPN",
+      "xpos": "NNP",
+      "feats": "Number=Sing"
+    },
+    {
+      "text": ",",
+      "lemma": null,
+      "upos": "PUNCT",
+      "xpos": ",",
+      "feats": null
+    },
+    {
+      "text": "CA",
+      "lemma": null,
+      "upos": "PROPN",
+      "xpos": "NNP",
+      "feats": "Number=Sing"
+    },
+    {
+      "text": "94103",
+      "lemma": null,
+      "upos": "NUM",
+      "xpos": "CD",
+      "feats": "NumForm=Digit|NumType=Card"
+    },
+    {
+      "text": ",",
+      "lemma": null,
+      "upos": "PUNCT",
+      "xpos": ",",
+      "feats": null
+    },
+    {
+      "text": "USA",
+      "lemma": null,
+      "upos": "PROPN",
+      "xpos": "NNP",
+      "feats": "Number=Sing"
+    }
+  ]
+}
