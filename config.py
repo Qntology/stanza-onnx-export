@@ -6,8 +6,8 @@ MODEL_NAME = "ibm-granite/granite-4.0-h-350m"
 HF_MODEL_URL = f"https://huggingface.co/{MODEL_NAME}"
 
 # 2. Stanza 설정
-# Stanza 모델이 저장될 기본 디렉토리
-STANZA_RESOURCES_DIR = os.path.join(os.path.expanduser('~'), 'stanza_resources')
+# 사용자가 요청한 AppData/Roaming/xtanza 경로로 변경
+STANZA_RESOURCES_DIR = os.path.join(os.getenv('APPDATA'), 'xtanza')
 
 # 지원하는 주요 언어 코드 (Stanza 기준)
 # https://huggingface.co/stanfordnlp/models 참고

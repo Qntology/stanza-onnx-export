@@ -29,15 +29,25 @@ class ModelManager:
         """Stanza 파이프라인 로드 및 캐싱"""
         if lang not in self.stanza_pipelines:
             try:
-                # 설치 여부 확인 후 로드
+                # 1. Full Pipeline 시도
                 self.stanza_pipelines[lang] = stanza.Pipeline(
                     lang=lang, 
                     model_dir=STANZA_RESOURCES_DIR,
-                    processors='tokenize,pos,ner', # NER 추가
+                    processors='tokenize,pos,ner',
                     download_method=None
                 )
-            except:
-                return None
+            except Exception as e:
+                print(f"Full pipeline load failed for {lang}, trying without NER: {e}")
+                try:
+                    # 2. NER 제외 시도 (Tokenize, POS 중심)
+                    self.stanza_pipelines[lang] = stanza.Pipeline(
+                        lang=lang, 
+                        model_dir=STANZA_RESOURCES_DIR,
+                        processors='tokenize,pos',
+                        download_method=None
+                    )
+                except:
+                    return None
         return self.stanza_pipelines[lang]
 
     def download_stanza_model(self, lang):
