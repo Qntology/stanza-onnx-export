@@ -13,10 +13,12 @@ def extract_specific_pii(text, target_label, description):
     if model_manager.model is None:
         return []
 
-    # 지시사항을 극도로 단순화하여 오답 방지
-    prompt = f"""<|start_of_role|>system<|end_of_role|>Task: Extract ONLY '{target_label}' ({description}) from the text.
-Return JSON array: [{{"word": "found_text", "type": "{target_label}"}}]
-If none, return [].
+    # 지시사항을 극도로 단순화하여 오답 방지 (확신이 있을 때만 추출하도록 강조)
+    prompt = f"""<|start_of_role|>system<|end_of_role|>Task: Extract ONLY the real '{target_label}' ({description}) from the text.
+Rules:
+1. Return JSON array: [{{"word": "actual_text", "type": "{target_label}"}}]
+2. If the text does NOT contain a real '{target_label}', return [].
+3. DO NOT guess. If unsure, return [].
 <|start_of_role|>user<|end_of_role|>Text: {text}<|end_of_text|>
 <|start_of_role|>assistant<|end_of_role|>
 JSON:"""
@@ -37,8 +39,20 @@ JSON:"""
         match = re.search(r'\[.*\]', response.strip(), re.DOTALL)
         if match:
             items = json.loads(match.group())
-            # "PII content"나 "found_text" 같은 기본 예시 단어는 필터링
-            return [i for i in items if isinstance(i, dict) and i.get('word') and i.get('word') not in ["found_text", "PII content", "extracted text"]]
+            valid_items = []
+            for i in items:
+                if not isinstance(i, dict): continue
+                word = str(i.get('word', '')).strip()
+                # 필터링 조건: 
+                # 1. 원본 텍스트에 존재해야 함
+                # 2. 라벨 이름이나 placeholder가 아니어야 함
+                # 3. 길이가 1보다 커야 함
+                if (word in text and 
+                    word.lower() not in [target_label.lower(), "found_text", "pii content", "extracted text"] and
+                    not word.startswith("found_") and
+                    len(word) > 1):
+                    valid_items.append(i)
+            return valid_items
         return []
     except:
         return []
@@ -64,13 +78,13 @@ def process_pii(text, mask_char="*", minimize_address=False):
         return "LLM 로드 실패", "N/A", [], f"Error: {msg}"
     
     results = []
-    # 순차적으로 물어볼 카테고리 (주소는 LLM이 전담)
+    # 순차적으로 물어볼 카테고리 (더 구체적인 설명 추가)
     target_categories = [
-        ("FIRSTNAME", "Person's name"),
-        ("CITY", "City/Province name like '서울특별시' or 'San Francisco'"),
-        ("STREET", "Street address/Road name like '테헤란로 123' or '1234 Market St'"),
-        ("ZIPCODE", "Postal/Zip code"),
-        ("ORGANIZATION", "Company or Institution name")
+        ("FIRSTNAME", "Individual person's name"),
+        ("STATE", "Province, State, or Do name like '경기도', 'California', 'CA'"),
+        ("CITY", "City, District, or Si/Gun/Gu name like '서울시', '성남시', 'San Francisco'"),
+        ("STREET", "Road name, Street address, or Building number like '판교역로 166', 'Market St 1234'"),
+        ("ZIPCODE", "Postal or Zip code like '13487', '94103'")
     ]
 
     # --- DOUBLE LOOP STRATEGY ---
