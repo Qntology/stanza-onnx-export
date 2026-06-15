@@ -51,7 +51,7 @@ class ModelManager:
             self._clear_vram()
 
     def load_stanza(self, lang):
-        """Stanza를 VRAM에 로드 (LLM이 있다면 먼저 제거)"""
+        """Stanza를 로드 (VRAM 점유 최소화를 위해 CPU 사용)"""
         if self.current_stanza_lang == lang and self.stanza_pipeline is not None:
             return self.stanza_pipeline
 
@@ -59,15 +59,14 @@ class ModelManager:
         self.unload_llm()
         self.unload_stanza()
 
-        print(f"🚀 Loading Stanza ({lang}) to VRAM...")
+        print(f"🚀 Loading Stanza ({lang}) on CPU to save VRAM...")
         try:
-            use_gpu = torch.cuda.is_available()
             self.stanza_pipeline = stanza.Pipeline(
                 lang=lang, 
                 model_dir=STANZA_RESOURCES_DIR,
-                processors='tokenize,pos', # 쪼개기용이므로 최소한의 프로세서만 사용
+                processors='tokenize', # pos 제거
                 download_method=None,
-                use_gpu=use_gpu
+                use_gpu=False # CPU 사용
             )
             self.current_stanza_lang = lang
             return self.stanza_pipeline

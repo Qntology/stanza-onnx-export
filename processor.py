@@ -74,8 +74,6 @@ def process_pii(text, mask_char="*"):
         doc = nlp(text)
         # 문장 단위로 분할
         units = [sent.text for sent in doc.sentences]
-        if doc.sentences:
-            pos_info += " / ".join([f"{w.text}({w.upos})" for w in doc.sentences[0].words[:15]]) + "...\n"
         print(f"[DEBUG] Stanza split text into {len(units)} sentences. Now unloading Stanza...")
         model_manager.unload_stanza()
     else:
@@ -86,6 +84,8 @@ def process_pii(text, mask_char="*"):
     success, msg = model_manager.load_llm()
     if not success:
         return "LLM 로드 실패", "N/A", [], f"Error: {msg}"
+    
+    print(f"[DEBUG] LLM loaded on device: {model_manager.model.device}")
 
     results = []
     for i, unit in enumerate(units):
