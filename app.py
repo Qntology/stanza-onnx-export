@@ -31,7 +31,9 @@ with gr.Blocks(title="PII Shield Global v4 (Granite)") as demo:
             with gr.Row():
                 with gr.Column():
                     input_txt = gr.Textbox(label="Input Text", lines=10, placeholder="마스킹할 텍스트를 입력하세요...")
-                    mask_style = gr.Dropdown(["*", "[TAG]"], label="Masking Style", value="*")
+                    with gr.Row():
+                        mask_style = gr.Dropdown(["*", "[TAG]"], label="Masking Style", value="*")
+                        minimize_addr = gr.Checkbox(label="Minimize Address (시/구만 표시)", value=False)
                     run_btn = gr.Button("Detect & Mask", variant="primary")
                     dl_auto_status = gr.Textbox(label="Auto-Download Status", interactive=False)
                 with gr.Column():
@@ -41,7 +43,7 @@ with gr.Blocks(title="PII Shield Global v4 (Granite)") as demo:
             
             run_btn.click(
                 process_pii, 
-                inputs=[input_txt, mask_style], 
+                inputs=[input_txt, mask_style, minimize_addr], 
                 outputs=[output_txt, info_txt, entity_label, dl_auto_status]
             )
             

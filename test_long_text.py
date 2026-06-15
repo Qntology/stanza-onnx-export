@@ -3,16 +3,18 @@ from model_manager import model_manager
 from processor import process_pii
 
 def test_long_complex_text():
-    print("=== Long & Complex Text PII Detection Test ===")
-    
-    # 모델 로드
-    success, msg = model_manager.load_llm()
-    if not success:
-        print(f"LLM Load Failed: {msg}")
-        return
+    output_file = "test_long_text_result.txt"
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("=== Long & Complex Text PII Detection Test ===\n")
+        
+        # 모델 로드
+        success, msg = model_manager.load_llm()
+        if not success:
+            f.write(f"LLM Load Failed: {msg}\n")
+            return
 
-    # 긴 테스트용 텍스트 구성 (한글 + 영어 혼합, 다양한 PII 포함)
-    long_text = """
+        # 긴 테스트용 텍스트 구성 (한글 + 영어 혼합, 다양한 PII 포함)
+        long_text = """
 [공지사항] 2026년 신규 프로젝트 참여자 명단 및 안내입니다.
 
 안녕하세요, 프로젝트 매니저 김철수(chulsoo.kim@globaltech.com)입니다. 
@@ -38,21 +40,24 @@ def test_long_complex_text():
 감사합니다.
     """
 
-    print(f"\n[Original Text Length]: {len(long_text)} chars")
-    print("\nProcessing... (Decomposing and Analyzing units)")
+        f.write(f"\n[Original Text Length]: {len(long_text)} chars\n")
+        f.write("\nProcessing... (Decomposing and Analyzing units)\n")
+        
+        masked_text, pos_info, entities, dl_status = process_pii(long_text, minimize_address=True)
+        
+        f.write(f"\n[Address Minimization]: Enabled\n")
+        f.write(f"[Detection Status]: {dl_status}\n")
+        f.write("\n" + "="*50 + "\n")
+        f.write("[Masked Protected Output]\n")
+        f.write("="*50 + "\n")
+        f.write(masked_text + "\n")
+        f.write("="*50 + "\n")
+        
+        f.write("\n[Detected Entities Summary]\n")
+        for word, etype in entities:
+            f.write(f"- {word} ({etype})\n")
     
-    masked_text, pos_info, entities, dl_status = process_pii(long_text)
-    
-    print(f"\n[Detection Status]: {dl_status}")
-    print("\n" + "="*50)
-    print("[Masked Protected Output]")
-    print("="*50)
-    print(masked_text)
-    print("="*50)
-    
-    print("\n[Detected Entities Summary]")
-    for word, etype in entities:
-        print(f"- {word} ({etype})")
+    print(f"Test completed. Results saved to {output_file}")
 
 if __name__ == "__main__":
     test_long_complex_text()
