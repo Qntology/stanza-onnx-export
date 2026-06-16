@@ -27,8 +27,6 @@ def run_verification():
             result = subprocess.run(cmd, input=content, capture_output=True, text=True, encoding="utf-8", errors="replace")
             
             if result.returncode == 0:
-                if result.stderr:
-                    print(f"DEBUG stderr:\n{result.stderr}")
                 output_json = json.loads(result.stdout)
                 
                 # Save to test_results
@@ -38,10 +36,10 @@ def run_verification():
                 
                 print(f"✅ Success. Language detected: {output_json['language_info']}")
                 print(f"   Entities found: {len(output_json['entities'])}")
-                for ent in output_json['entities'][:3]: # Show first 3
+                for ent in output_json['entities'][:5]: # Show first 5
                     print(f"     - {ent['word']} ({ent['type']})")
-                if len(output_json['entities']) > 3:
-                    print(f"     ... and {len(output_json['entities'])-3} more.")
+                if len(output_json['entities']) > 5:
+                    print(f"     ... and {len(output_json['entities'])-5} more.")
             else:
                 print(f"❌ Error: {result.stderr}")
         except Exception as e:
