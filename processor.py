@@ -66,17 +66,15 @@ def scan_tracking_numbers(text):
     return results
 
 def scan_address_candidates(text, lang_code):
+    """[개편] 하드코딩 블랙리스트를 제거하고 앵커 기반으로 후보만 수집 (검증은 LLM에 위임)"""
     if lang_code not in ADDRESS_DICTIONARY: return []
     dict_info = ADDRESS_DICTIONARY[lang_code]
     anchors = dict_info["admin"] + dict_info["street"]
     results = []
     
-    ko_blacklist = {"있으므로", "반드시", "함으로", "하므로", "함으로서", "도시", "당시", "동시"}
     words = text.split()
-    
     for i, word in enumerate(words):
         clean_word = re.sub(r'[^\w\s]', '', word)
-        if lang_code == "ko" and clean_word in ko_blacklist: continue
         
         found_anchor = None
         for anchor in anchors:
@@ -85,6 +83,7 @@ def scan_address_candidates(text, lang_code):
                 break
         
         if found_anchor:
+            # 앵커 주변 블록 수집
             final_address_block = [word]
             if i > 0 and NUMBER_BLOCK_REGEX.match(words[i-1]):
                 final_address_block.insert(0, words[i-1])
@@ -101,39 +100,52 @@ def scan_address_candidates(text, lang_code):
     return results
 
 def refine_entities_with_hint(text, found_results, main_lang):
-    """탐지된 이름/주소를 HINT로 사용하여 주변 누락분 및 상세 정보를 2차 확장 탐지"""
-    from config import LANG_REGISTRY
-    lang_info = LANG_REGISTRY.get(main_lang, {"name": "Unknown", "prefix": "UN"})
-    tag_prefix = lang_info["prefix"]
+    """[신규] Stanza의 의존성 구문 분석(Dependency)을 사용하여 인접 엔티티 결합 및 경계 확정"""
+    # 1. Stanza 재로드 (의존성 분석용)
+    nlp = model_manager.load_stanza(main_lang, processors='tokenize,pos,lemma,depparse')
+    if not nlp: return found_results
     
-    # 정제 대상: PERSON, ADDRESS
-    targets = [r for r in found_results if any(t in r[1] for t in ["PERSON", "ADDRESS", "LOCATION"])]
-    new_finds = []
+    doc = nlp(text)
+    refined = []
+    tokens = []
+    for sent in doc.sentences:
+        tokens.extend(sent.words)
+
+    model_manager.unload_stanza()
     
-    for word, p_type in targets:
-        idx = text.find(word)
-        if idx == -1: continue
-        # 주변 컨텍스트 (앞뒤 30자)
-        context_window = text[max(0, idx-30):min(len(text), idx+len(word)+30)]
+    # 2. 결합 로직
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        curr_text = token.text
         
-        hint_type = "PERSON name" if "PERSON" in p_type else "ADDRESS/LOCATION"
-        prompt = f"""<|start_of_role|>system<|end_of_role|>Task: Entity Expansion
-HINT: '{word}' is part of a {hint_type} in {lang_info['name']}.
-Context: ...{context_window}...
-Question: Find the FULL range of this {hint_type}. (e.g., Full Name or Full Address)
-Rules: Return ONLY the full string found in context.
-<|start_of_role|>user<|end_of_role|>Context: {context_window}
-<|start_of_role|>assistant<|end_of_role|>
-Full Entity:"""
+        # 현재 토큰이 엔티티의 일부인 경우
+        matching_ent = None
+        for word, p_type in found_results:
+            if curr_text in word:
+                matching_ent = (word, p_type)
+                break
         
-        try:
-            model_manager.model.reset()
-            res = model_manager.model.create_completion(prompt=prompt, max_tokens=40, temperature=0)['choices'][0]['text'].strip()
-            if res and len(res) > 1 and res in context_window:
-                new_finds.append((res, p_type)) # 원래 타입을 유지하되 범위 확장
-        except: continue
-        
-    return list(set(found_results + new_finds))
+        if matching_ent:
+            # 인접한 flat/compound 관계 토큰 찾기
+            j = i + 1
+            combined_text = curr_text
+            while j < len(tokens):
+                next_token = tokens[j]
+                if next_token.deprel in ['flat', 'compound', 'flat:name', 'nummod']:
+                    combined_text += " " + next_token.text
+                    j += 1
+                else:
+                    break
+            
+            # 결합된 텍스트가 원본에 존재하는지 확인
+            if combined_text in text:
+                refined.append((combined_text, matching_ent[1]))
+            i = j
+        else:
+            i += 1
+            
+    return list(set(found_results + refined))
 
 def finalize_contextual_labels(text, entities, main_lang):
     """[4단계] 수집/확장된 모든 엔티티에 대해 문맥 기반 최종 라벨링 (스포츠팀 vs 지명 등)"""
@@ -151,6 +163,7 @@ def finalize_contextual_labels(text, entities, main_lang):
         
         # 문맥 추출 (충분히 넓게)
         idx = text.find(word)
+        if idx == -1: continue
         context = text[max(0, idx-40):min(len(text), idx+len(word)+40)]
         
         prompt = f"""<|start_of_role|>system<|end_of_role|>Task: PII Classification
@@ -171,7 +184,7 @@ Category:"""
             model_manager.model.reset()
             res = model_manager.model.create_completion(prompt=prompt, max_tokens=15, temperature=0)['choices'][0]['text'].strip().upper()
             
-            # 매칭 로직 개선
+            # 매칭 로직
             matched = "NONE"
             for lbl in ["PERSON", "ORGANIZATION", "LOCATION", "ADDRESS", "PHONE", "EMAIL", "PCC", "TRACKING_NUMBER", "AGE"]:
                 if lbl in res:
@@ -181,7 +194,7 @@ Category:"""
             if matched != "NONE":
                 final_entities.append((word, f"{tag_prefix}_{matched}"))
         except:
-            # 실패 시 기본적으로 PERSON으로 간주하여 마스킹 누락 방지 (보수적 접근)
+            # 실패 시 보수적으로 처리
             final_entities.append((word, f"{tag_prefix}_PERSON"))
             
     return final_entities
@@ -194,48 +207,63 @@ def process_pii(text, mask_char="*", minimize_address=False):
         text = preprocess_text(text)
         main_lang, _ = get_best_language(text)
         
-        # [Step 2] 후보군 수집 (Collection)
-        candidates = []
-        # 2.1 정규식 (Phone, Email, PCC)
-        for m in PHONE_REGEX.finditer(text): candidates.append((m.group(), "PHONE"))
-        for m in EMAIL_REGEX.finditer(text): candidates.append((m.group(), "EMAIL"))
-        for m in PCC_REGEX.finditer(text): candidates.append((m.group(), "PCC"))
+        # [Step 2] Stanza를 이용한 문장 분할 및 POS/Dependency 분석 (고도화)
+        nlp = model_manager.load_stanza(main_lang, processors='tokenize,pos,lemma,depparse')
+        if not nlp: return "Error", "N/A", [], "Stanza Load Failed"
         
-        # 2.2 주소/운송장
-        for c in scan_address_candidates(text, main_lang) + scan_tracking_numbers(text):
-            candidates.append((c["word"], c["type"]))
+        doc = nlp(text)
+        all_candidates = []
+        
+        # 문장 단위로 독립 처리
+        for sent in doc.sentences:
+            sent_text = sent.text
+            sent_candidates = []
             
-        # 2.3 POS(형태소) 분석 - 고유명사 및 숫자
-        nlp = model_manager.load_stanza(main_lang, processors='tokenize,pos')
-        if nlp:
-            doc = nlp(text)
-            for sent in doc.sentences:
-                for word in sent.words:
-                    if word.upos in ['PROPN', 'X']: # 고유명사 위주
-                        candidates.append((word.text, "PROPN"))
-                    elif word.upos == 'NUM' and len(word.text) > 1: # 숫자 (나이 등)
-                        candidates.append((word.text, "NUM"))
-            model_manager.unload_stanza()
+            # 2.1 정규식 매칭 (문장 내)
+            for m in PHONE_REGEX.finditer(sent_text): sent_candidates.append((m.group(), "PHONE"))
+            for m in EMAIL_REGEX.finditer(sent_text): sent_candidates.append((m.group(), "EMAIL"))
+            for m in PCC_REGEX.finditer(sent_text): sent_candidates.append((m.group(), "PCC"))
             
-        # [Step 3] 확장 및 정제 (Refinement)
+            # 2.2 주소/운송장 (문장 내)
+            for c in scan_address_candidates(sent_text, main_lang) + scan_tracking_numbers(sent_text):
+                sent_candidates.append((c["word"], c["type"]))
+                
+            # 2.3 POS 기반 고유명사
+            for word in sent.words:
+                if word.upos in ['PROPN', 'X']:
+                    sent_candidates.append((word.text, "PROPN"))
+                elif word.upos == 'NUM' and len(word.text) > 1:
+                    sent_candidates.append((word.text, "NUM"))
+            
+            all_candidates.extend(sent_candidates)
+
+        model_manager.unload_stanza()
+        
+        # [Step 3] LLM 추론 (분산 처리된 후보군 검증 및 확장)
         success, msg = model_manager.load_llm()
         if not success: return "Error", "N/A", [], msg
         
-        # 1차 중복 제거 (타입 무관하게 텍스트 위주)
-        initial_cands = list(set(candidates))
+        # 1차 검증
+        unique_cands = list(set(all_candidates))
+        verified_cands = []
+        for word, p_type in unique_cands:
+            if p_type in ["PHONE", "EMAIL", "PCC"]:
+                verified_cands.append((word, p_type))
+            else:
+                idx = text.find(word)
+                win_text = text[max(0, idx-40):min(len(text), idx+len(word)+40)]
+                if verify_with_llm(word, p_type, win_text):
+                    verified_cands.append((word, p_type))
         
-        # HINT 기반 2차 확장 (이름/주소 범위 넓히기)
-        refined_cands = refine_entities_with_hint(text, initial_cands, main_lang)
+        # HINT 기반 2차 확장 (LLM)
+        refined_llm = refine_entities_with_hint(text, verified_cands, main_lang)
         
-        # [Step 4] 문맥 기반 최종 라벨 확정 (Contextual Labeling)
-        # 사용자 요청: 라벨링을 먼저 한 후 마스킹 진행
-        final_entities = finalize_contextual_labels(text, refined_cands, main_lang)
-
-        # [Step 5] 최종 마스킹 (Masking)
+        # [Step 4] 문맥 기반 최종 라벨링 및 마스킹
+        final_entities = finalize_contextual_labels(text, refined_llm, main_lang)
+        
         unique_entities = sorted(list(set(final_entities)), key=lambda x: len(str(x[0])), reverse=True)
         masked_text = text
         for word, p_type in unique_entities:
-            # 마스킹 예외: 너무 짧은 단어는 제외 (단, 정규식 매칭 제외)
             if len(word) < 2 and not any(t in p_type for t in ["PHONE", "EMAIL", "PCC"]): continue
             
             if minimize_address:
@@ -246,4 +274,4 @@ def process_pii(text, mask_char="*", minimize_address=False):
             else:
                 masked_text = masked_text.replace(word, mask_char * len(word))
                 
-        return masked_text, f"Lang: {main_lang}", unique_entities, "✨ Logistic PII Detection Complete"
+        return masked_text, f"Lang: {main_lang}", unique_entities, "✨ Linguistic PII Detection Complete"
