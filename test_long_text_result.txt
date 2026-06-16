@@ -3,7 +3,7 @@
 [Original Text Length]: 721 chars
 
 [Address Minimization]: Enabled
-[Detection Status]: ✨ POS-Guided Hybrid (GGUF) Complete
+[Detection Status]: ✨ Enhanced Address Detection Complete
 
 ==================================================
 [Masked Protected Output]
@@ -11,24 +11,24 @@
 
 [공지사항] 2026년 신규 프로젝트 참여자 명단 및 안내입니다.
 
-안녕하세요, 프로젝트 매니저 ******************************)입니다. 
+안녕하세요, 프로젝트 매니저 김철수(chulsoo.kim@globaltech.com)입니다. 
 이번 'PII Shield' 개발 프로젝트에 참여해주신 모든 분들께 감사드립니다. 
 
 각 파트별 담당자 연락처와 주소 정보를 아래와 같이 공유하오니 확인 부탁드립니다.
 
 1. 개발팀 (Korea Office)
-- 팀장: 이영희, 연락처: *************, 주소: ***** 서초구 반포대로 23길 45 (우편번호 *****)
-- 담당자: ***, 이메일: **********************
+- 팀장: 이영희, 연락처: 010-5555-6666, 주소: ***** 서초구 반포대로 23길 45 (우편번호 06655)
+- 담당자: 박지민, 이메일: jimin.park99@naver.com
 
 2. 디자인팀 (Global Support)
-- Leader: ***** Jenkins, Phone: ***************, Email: ************************
-- Address: **** Amphitheatre Parkway, Mountain View, CA *****, USA
+- Leader: Sarah Jenkins, Phone: +1-202-555-0147, Email: sarah.j@design-studio.io
+- Address: 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA
 
 3. 운영 및 보안팀
-- 담당: 최민수, 전화: ***********, 계좌번호: 신한은행 ************89 (정산용)
-- Emergency Contact: Michael O'Connor, Cell: *************
+- 담당: 최민수, 전화: 02-123-4567, 계좌번호: 신한은행 110-123-456789 (정산용)
+- Emergency Contact: Michael O'Connor, Cell: 010-9988-7766
 
-본 메일은 개인정보를 포함하고 있으므로 열람 후 반드시 파기해 주시기 바랍니다.
+본 메일은 개인정보를 포함하고 **** 열람 후 *** 파기해 주시기 바랍니다.
 문의사항은 고객센터(1588-0000) 또는 운영팀으로 연락주세요.
 
 감사합니다.
@@ -44,11 +44,8 @@
 - 010-9988-7766 (PHONE)
 - 110-123-4567 (PHONE)
 - 02-123-4567 (PHONE)
-- 서울특별시 (ORGANIZATION)
-- Sarah (FIRSTNAME)
-- 94043 (ZIPCODE)
-- 06655 (ZIPCODE)
-- 김철수( (LASTNAME)
-- 1600 (ZIPCODE)
+- 서울특별시 (ADDRESS)
+- 있으므로 (ADDRESS)
+- 반드시 (ADDRESS)
+- 이영희 (FIRSTNAME)
 - 박지민 (FIRSTNAME)
-- 서초구 (CITY)

@@ -2,117 +2,158 @@ import re
 import json
 from model_manager import model_manager
 from utils import get_best_language
-from config import PII_CATEGORIES_MAP
+from config import PII_CATEGORIES_MAP, ADDRESS_DICTIONARY
 
-# 정규식 - 강력한 패턴은 무조건 정규식으로
+# 1. 정규표현식 정의
+# 핵심 PII (선점 대상)
 PHONE_REGEX = re.compile(r'(\+?\d{1,3}[- ]?)?\(?\d{2,4}\)?[- ]?\d{3,4}[- ]?\d{4}')
 EMAIL_REGEX = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
 
-def classify_pii_with_pos(word, pos_tag, context):
-    """POS 태그를 기반으로 후보 단어의 PII 여부를 정밀 분류 (llama-cpp-python 기반)"""
-    if model_manager.model is None: return None
-    
-    # POS 태그별 매핑될 수 있는 논리적 라벨 그룹 정의
-    tag_map = {
-        'PROPN': ["FIRSTNAME", "LASTNAME", "CITY", "STATE", "ORGANIZATION", "STREET", "ADDRESS"],
-        'NUM': ["AGE", "ZIPCODE", "PHONE", "BANKACCOUNT", "CREDITCARD", "AMOUNT", "SSN", "DATE", "STREET", "BUILDINGNUMBER"],
-        'NOUN': ["JOBTITLE", "OCCUPATION", "STREET", "BUILDINGNUMBER", "ADDRESS"]
-    }
-    
-    target_labels = tag_map.get(pos_tag, ["FIRSTNAME", "CITY", "STREET", "ORGANIZATION"])
-    labels_str = ", ".join(target_labels)
+# [신규] 개인통관고유부호 (P + 12자리 숫자)
+PCC_REGEX = re.compile(r'\bP\d{12}\b', re.IGNORECASE)
 
-    # Granite GGUF 프롬프트 구성
-    prompt = f"""<|start_of_role|>system<|end_of_role|>Is the word '{word}' a PII in the given context?
+# [신규] 운송장번호 후보 (9~14자리 연속 숫자)
+TRACKING_CANDIDATE_REGEX = re.compile(r'\b\d{9,14}\b')
+
+# 숫자 블록 패턴 (번지수 등)
+NUMBER_BLOCK_REGEX = re.compile(r'^[\d\-\./]+$')
+
+def verify_with_llm(word, p_type, context):
+    if model_manager.model is None: return True
+    prompt = f"""<|start_of_role|>system<|end_of_role|>Is '{word}' a valid '{p_type}'?
 Context: {context}
-Target Labels: {labels_str}
+Rules: Answer ONLY 'YES' or 'NO'.
+<|start_of_role|>user<|end_of_role|>Word: {word}
+<|start_of_role|>assistant<|end_of_role|>
+Answer:"""
+    try:
+        model_manager.model.reset()
+        res = model_manager.model.create_completion(prompt=prompt, max_tokens=5, temperature=0)['choices'][0]['text'].strip().upper()
+        return "YES" in res
+    except: return True
 
-Rules:
-1. Return ONLY the LABEL NAME if it matches perfectly.
-2. Return 'NONE' if it is a common word, header, or general noun.
-3. Example: 'Notice' -> NONE, 'Seoul' -> CITY.
+def scan_tracking_numbers(text):
+    """문맥 기반 운송장번호 탐지"""
+    results = []
+    tracking_keywords = ["운송장", "송장", "tracking", "waybill", "배송번호", "주문번호"]
+    
+    for match in TRACKING_CANDIDATE_REGEX.finditer(text):
+        num = match.group()
+        start, end = match.start(), match.end()
+        # 주변 문맥 (좌우 20자) 확인
+        context_area = text[max(0, start-20):min(len(text), end+20)].lower()
+        
+        if any(kw in context_area for kw in tracking_keywords):
+            results.append({"word": num, "type": "TRACKING_NUMBER", "context": context_area})
+    return results
+
+def scan_address_candidates(text, lang_code):
+    if lang_code not in ADDRESS_DICTIONARY: return []
+    dict_info = ADDRESS_DICTIONARY[lang_code]
+    anchors = dict_info["admin"] + dict_info["street"]
+    results = []
+    
+    ko_blacklist = {"있으므로", "반드시", "함으로", "하므로", "함으로서", "도시", "당시", "동시"}
+    words = text.split()
+    
+    for i, word in enumerate(words):
+        clean_word = re.sub(r'[^\w\s]', '', word)
+        if lang_code == "ko" and clean_word in ko_blacklist: continue
+        
+        found_anchor = None
+        for anchor in anchors:
+            if clean_word.endswith(anchor) or (lang_code != 'ko' and clean_word == anchor):
+                found_anchor = anchor
+                break
+        
+        if found_anchor:
+            final_address_block = [word]
+            if i > 0 and NUMBER_BLOCK_REGEX.match(words[i-1]):
+                final_address_block.insert(0, words[i-1])
+            if i < len(words) - 1 and NUMBER_BLOCK_REGEX.match(re.sub(r'[^\w\d\-\./]', '', words[i+1])):
+                final_address_block.append(words[i+1])
+            
+            full_word = " ".join(final_address_block)
+            context = " ".join(words[max(0, i-3):min(len(words), i+4)])
+            results.append({"word": full_word, "type": "ADDRESS", "context": context})
+            
+            zip_match = re.search(dict_info["zipcode_regex"], context)
+            if zip_match:
+                results.append({"word": zip_match.group(), "type": "ZIPCODE", "context": context})
+    return results
+
+def classify_pii_with_pos(word, pos_tag, context):
+    tag_map = {
+        'PROPN': ["FIRSTNAME", "LASTNAME", "ORGANIZATION"],
+        'NUM': ["AGE", "BANKACCOUNT", "CREDITCARD", "SSN", "DATE"],
+        'NOUN': ["JOBTITLE", "OCCUPATION"]
+    }
+    target_labels = tag_map.get(pos_tag, ["FIRSTNAME", "ORGANIZATION"])
+    prompt = f"""<|start_of_role|>system<|end_of_role|>Classify: {word}
+Context: {context}
+Labels: {", ".join(target_labels)}
+Rules: Return ONLY LABEL or 'NONE'.
 <|start_of_role|>user<|end_of_role|>Word: {word}
 <|start_of_role|>assistant<|end_of_role|>
 Label:"""
-    
     try:
-        # KV 캐시 충돌 방지를 위해 컨텍스트 리셋
         model_manager.model.reset()
-        
-        response_data = model_manager.model.create_completion(
-            prompt=prompt,
-            max_tokens=10,
-            stop=["<|end_of_text|>", "\n"],
-            temperature=0,
-            echo=False
-        )
-        
-        response = response_data['choices'][0]['text'].strip().upper()
-        
-        if "NONE" in response: return None
+        res = model_manager.model.create_completion(prompt=prompt, max_tokens=10, temperature=0)['choices'][0]['text'].strip().upper()
         for lbl in target_labels:
-            if lbl in response: return lbl
+            if lbl in res: return lbl
         return None
-    except Exception as e:
-        print(f"LLM Classification failed: {e}")
-        return None
+    except: return None
 
 def process_pii(text, mask_char="*", minimize_address=False):
-    if not text: return "Empty input", "N/A", [], "Idle"
+    if not text: return "Empty", "N/A", [], "Idle"
     main_lang, _ = get_best_language(text)
     
-    # [1] Stanza 분석 (PII 후보군 추출)
+    # [1] 다양한 후보군 추출
+    address_candidates = scan_address_candidates(text, main_lang)
+    tracking_candidates = scan_tracking_numbers(text)
+    
     nlp = model_manager.load_stanza(main_lang, processors='tokenize,pos')
-    candidates = []
+    pos_candidates = []
     if nlp:
         doc = nlp(text)
         for sent in doc.sentences:
             for word in sent.words:
-                # 고유명사, 숫자, 기타 외래어(X)를 후보로 선정
-                if word.upos in ['PROPN', 'NUM', 'X'] or (word.xpos == 'nq' and len(word.text) > 1):
-                    candidates.append({"word": word.text, "upos": word.upos, "context": sent.text})
+                if word.upos in ['PROPN', 'NUM', 'X']:
+                    pos_candidates.append({"word": word.text, "upos": word.upos, "context": sent.text})
         model_manager.unload_stanza()
     
-    # [2] LLM 로드 (llama-cpp)
     success, msg = model_manager.load_llm()
-    if not success: return "LLM Load Failed", "N/A", [], f"Error: {msg}"
+    if not success: return "Error", "N/A", [], msg
     
-    final_entities = []
-    # 정규식 탐지 (가장 정확)
-    for m in PHONE_REGEX.finditer(text): final_entities.append((m.group(), "PHONE"))
-    for m in EMAIL_REGEX.finditer(text): final_entities.append((m.group(), "EMAIL"))
+    final_results = []
+    # 1. 고정 정규식 선점 (Phone, Email, PCC)
+    for m in PHONE_REGEX.finditer(text): final_results.append((m.group(), "PHONE"))
+    for m in EMAIL_REGEX.finditer(text): final_results.append((m.group(), "EMAIL"))
+    for m in PCC_REGEX.finditer(text): final_results.append((m.group(), "PCC"))
+    
+    # 2. 주소 및 운송장번호 선점
+    for cand in address_candidates + tracking_candidates:
+        if verify_with_llm(cand["word"], cand["type"], cand["context"]):
+            if not any(cand["word"] in str(r[0]) for r in final_results):
+                final_results.append((cand["word"], cand["type"]))
+            
+    # 3. 기타 POS 후보
+    for cand in pos_candidates:
+        word = cand["word"]
+        if any(word in str(r[0]) for r in final_results): continue
+        label = classify_pii_with_pos(word, cand["upos"], cand["context"])
+        if label: final_results.append((word, label))
 
-    # [3] POS-Guided 정밀 분류
-    unique_cand = []
-    seen = set()
-    for c in candidates:
-        if c["word"] not in seen:
-            unique_cand.append(c)
-            seen.add(c["word"])
-
-    print(f"Analyzing {len(unique_cand)} linguistic candidates with Granite GGUF...")
-    for i, c in enumerate(unique_cand):
-        word, pos = c["word"], c["upos"]
-        # 이미 정규식에 걸린 단어는 제외
-        if any(word in str(e[0]) for e in final_entities): continue
-        
-        print(f"[{i+1}/{len(unique_cand)}] '{word}' ({pos})...")
-        label = classify_pii_with_pos(word, pos, c["context"])
-        if label:
-            print(f"   -> Confirmed: {label}")
-            final_entities.append((word, label))
-
-    # [4] 마스킹 (긴 단어부터)
-    unique_entities = sorted(list(set(final_entities)), key=lambda x: len(str(x[0])), reverse=True)
+    # [4] 마스킹
+    unique_entities = sorted(list(set(final_results)), key=lambda x: len(str(x[0])), reverse=True)
     masked_text = text
-    address_mask_targets = ["STREET", "ZIPCODE", "BUILDINGNUMBER", "ADDRESS", "SECONDARYADDRESS"]
-    address_expose_targets = ["CITY", "STATE", "COUNTY"]
-
     for word, p_type in unique_entities:
-        if minimize_address and p_type in address_mask_targets:
-            masked_text = masked_text.replace(word, mask_char * len(word))
-        elif minimize_address and p_type in address_expose_targets: pass
+        if minimize_address:
+            if p_type in ["STREET", "ZIPCODE", "ADDRESS", "PCC", "TRACKING_NUMBER"]:
+                masked_text = masked_text.replace(word, mask_char * len(word))
+            elif any(word.endswith(s) for s in ["구", "군", "읍", "면", "동"]):
+                masked_text = masked_text.replace(word, mask_char * len(word))
         else:
             masked_text = masked_text.replace(word, mask_char * len(word))
             
-    return masked_text, f"Lang: {main_lang}", unique_entities, "✨ POS-Guided Hybrid (GGUF) Complete"
+    return masked_text, f"Lang: {main_lang}", unique_entities, "✨ Logistic PII Detection Complete"
