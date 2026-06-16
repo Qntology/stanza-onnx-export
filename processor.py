@@ -34,8 +34,12 @@ def preprocess_text(text):
 
 def verify_with_llm(word, p_type, context):
     if model_manager.model is None: return True
-    prompt = f"""<|start_of_role|>system<|end_of_role|>Is '{word}' a valid '{p_type}'?
-Context: {context}
+    # p_type이 PROPN 등 기술적 용어일 경우 일반적인 'Entity'로 설명
+    display_type = "PII Entity" if p_type == "PROPN" else p_type
+    
+    prompt = f"""<|start_of_role|>system<|end_of_role|>Task: PII Verification
+Question: Is '{word}' a valid '{display_type}' in the given context?
+Context: ...{context}...
 Rules: Answer ONLY 'YES' or 'NO'.
 <|start_of_role|>user<|end_of_role|>Word: {word}
 <|start_of_role|>assistant<|end_of_role|>
@@ -96,139 +100,146 @@ def scan_address_candidates(text, lang_code):
                 results.append({"word": zip_match.group(), "type": "ZIPCODE", "context": context})
     return results
 
-def classify_pii_with_pos(word, pos_tag, context, main_lang):
-    from config import LANG_REGISTRY
-    from utils import get_best_language
-    
-    # 단어의 지배적 언어 감지
-    word_lang, _ = get_best_language(word)
-    
-    # 레지스트리에서 정보 조회
-    lang_info = LANG_REGISTRY.get(word_lang, LANG_REGISTRY.get(main_lang, {"name": "Unknown", "prefix": "UN"}))
-    script_name = lang_info["name"]
-    tag_prefix = lang_info["prefix"]
-    
-    tag_map = {
-        'PROPN': ["PERSON", "ORGANIZATION", "LOCATION"],
-        'NUM': ["AGE", "BANKACCOUNT", "CREDITCARD", "SSN", "DATE"],
-        'NOUN': ["JOBTITLE", "OCCUPATION"]
-    }
-    target_labels = tag_map.get(pos_tag, ["PERSON", "ORGANIZATION"])
-    
-    # 언어 컨텍스트를 주입한 정밀 프롬프트
-    prompt = f"""<|start_of_role|>system<|end_of_role|>Task: PII Classification
-Language Context: {script_name}
-Context: {context}
-Question: In {script_name} context, is the word '{word}' one of these: {", ".join(target_labels)}?
-Rules: Return ONLY the LABEL or 'NONE'.
-<|start_of_role|>user<|end_of_role|>Word: {word}
-<|start_of_role|>assistant<|end_of_role|>
-Label:"""
-    try:
-        model_manager.model.reset()
-        res = model_manager.model.create_completion(prompt=prompt, max_tokens=10, temperature=0)['choices'][0]['text'].strip().upper()
-        for lbl in target_labels:
-            if lbl in res: 
-                # [변경] 태그 정규화: KO_PERSON, EN_ORGANIZATION 등
-                return f"{tag_prefix}_{lbl}"
-        return None
-    except: return None
-
-def refine_names_with_hint(text, found_results, main_lang):
-    """탐지된 이름을 HINT로 사용하여 주변의 성/이름 누락분을 2차 탐지"""
+def refine_entities_with_hint(text, found_results, main_lang):
+    """탐지된 이름/주소를 HINT로 사용하여 주변 누락분 및 상세 정보를 2차 확장 탐지"""
     from config import LANG_REGISTRY
     lang_info = LANG_REGISTRY.get(main_lang, {"name": "Unknown", "prefix": "UN"})
     tag_prefix = lang_info["prefix"]
     
-    person_results = [r for r in found_results if "PERSON" in r[1]]
+    # 정제 대상: PERSON, ADDRESS
+    targets = [r for r in found_results if any(t in r[1] for t in ["PERSON", "ADDRESS", "LOCATION"])]
     new_finds = []
     
-    for word, p_type in person_results:
-        # 단어 주변 컨텍스트 추출 (앞뒤 15자)
+    for word, p_type in targets:
         idx = text.find(word)
         if idx == -1: continue
-        context_window = text[max(0, idx-15):min(len(text), idx+len(word)+15)]
+        # 주변 컨텍스트 (앞뒤 30자)
+        context_window = text[max(0, idx-30):min(len(text), idx+len(word)+30)]
         
-        # [HINT 기반 프롬프트]
-        prompt = f"""<|start_of_role|>system<|end_of_role|>Task: Name Decomposition
-HINT: The word '{word}' is already confirmed as a PERSON name in {lang_info['name']}.
+        hint_type = "PERSON name" if "PERSON" in p_type else "ADDRESS/LOCATION"
+        prompt = f"""<|start_of_role|>system<|end_of_role|>Task: Entity Expansion
+HINT: '{word}' is part of a {hint_type} in {lang_info['name']}.
 Context: ...{context_window}...
-Question: Looking at the context, identify the full name including 'First Name' and 'Last Name'.
-Rules: Return in JSON format: {{"full_name": "...", "first_name": "...", "last_name": "..."}}
+Question: Find the FULL range of this {hint_type}. (e.g., Full Name or Full Address)
+Rules: Return ONLY the full string found in context.
 <|start_of_role|>user<|end_of_role|>Context: {context_window}
 <|start_of_role|>assistant<|end_of_role|>
-{{"full_name":"""
+Full Entity:"""
         
         try:
             model_manager.model.reset()
-            # "{"full_name":" 부분을 미리 채워넣어 JSON 유도
-            res_raw = model_manager.model.create_completion(prompt=prompt, max_tokens=60, temperature=0)['choices'][0]['text'].strip()
-            res_json = json.loads('{"full_name":' + res_raw if not res_raw.startswith('{') else res_raw)
-            
-            # 새로 발견된 부분들을 결과에 추가
-            for key in ["full_name", "first_name", "last_name"]:
-                val = res_json.get(key, "")
-                if val and len(val) > 1 and val in context_window:
-                    label = "FIRSTNAME" if "first" in key else "LASTNAME" if "last" in key else "PERSON"
-                    new_finds.append((val, f"{tag_prefix}_{label}"))
+            res = model_manager.model.create_completion(prompt=prompt, max_tokens=40, temperature=0)['choices'][0]['text'].strip()
+            if res and len(res) > 1 and res in context_window:
+                new_finds.append((res, p_type)) # 원래 타입을 유지하되 범위 확장
         except: continue
         
     return list(set(found_results + new_finds))
+
+def finalize_contextual_labels(text, entities, main_lang):
+    """[4단계] 수집/확장된 모든 엔티티에 대해 문맥 기반 최종 라벨링 (스포츠팀 vs 지명 등)"""
+    from config import LANG_REGISTRY
+    final_entities = []
+    
+    unique_words = sorted(list(set([e[0] for e in entities])), key=len, reverse=True)
+    
+    for word in unique_words:
+        # 단어의 지배적 언어 재확인
+        from utils import get_best_language
+        word_lang, _ = get_best_language(word)
+        lang_info = LANG_REGISTRY.get(word_lang, LANG_REGISTRY.get(main_lang, {"name": "Unknown", "prefix": "UN"}))
+        tag_prefix = lang_info["prefix"]
+        
+        # 문맥 추출 (충분히 넓게)
+        idx = text.find(word)
+        context = text[max(0, idx-40):min(len(text), idx+len(word)+40)]
+        
+        prompt = f"""<|start_of_role|>system<|end_of_role|>Task: PII Classification
+Context: ...{context}...
+Word: '{word}'
+Question: In this context, is '{word}' a:
+1. PERSON (Name)
+2. ORGANIZATION (Team, Company, Club)
+3. LOCATION (City, Country)
+4. ADDRESS (Street, Building)
+5. NONE (Not PII)
+
+Rules: Return ONLY the category name. If unsure but it looks like a Proper Noun, choose PERSON or ORGANIZATION.
+<|start_of_role|>user<|end_of_role|>Word: {word}
+<|start_of_role|>assistant<|end_of_role|>
+Category:"""
+        try:
+            model_manager.model.reset()
+            res = model_manager.model.create_completion(prompt=prompt, max_tokens=15, temperature=0)['choices'][0]['text'].strip().upper()
+            
+            # 매칭 로직 개선
+            matched = "NONE"
+            for lbl in ["PERSON", "ORGANIZATION", "LOCATION", "ADDRESS", "PHONE", "EMAIL", "PCC", "TRACKING_NUMBER", "AGE"]:
+                if lbl in res:
+                    matched = lbl
+                    break
+            
+            if matched != "NONE":
+                final_entities.append((word, f"{tag_prefix}_{matched}"))
+        except:
+            # 실패 시 기본적으로 PERSON으로 간주하여 마스킹 누락 방지 (보수적 접근)
+            final_entities.append((word, f"{tag_prefix}_PERSON"))
+            
+    return final_entities
 
 def process_pii(text, mask_char="*", minimize_address=False):
     with _processing_lock:
         if not text: return "Empty", "N/A", [], "Idle"
         
-        # [신규] 전처리: 특수문자 주변 공백 삽입 (단어 분리 최적화)
+        # [Step 1] 전처리
         text = preprocess_text(text)
-        
         main_lang, _ = get_best_language(text)
         
-        # [1] 다양한 후보군 추출
-        address_candidates = scan_address_candidates(text, main_lang)
-        tracking_candidates = scan_tracking_numbers(text)
+        # [Step 2] 후보군 수집 (Collection)
+        candidates = []
+        # 2.1 정규식 (Phone, Email, PCC)
+        for m in PHONE_REGEX.finditer(text): candidates.append((m.group(), "PHONE"))
+        for m in EMAIL_REGEX.finditer(text): candidates.append((m.group(), "EMAIL"))
+        for m in PCC_REGEX.finditer(text): candidates.append((m.group(), "PCC"))
         
+        # 2.2 주소/운송장
+        for c in scan_address_candidates(text, main_lang) + scan_tracking_numbers(text):
+            candidates.append((c["word"], c["type"]))
+            
+        # 2.3 POS(형태소) 분석 - 고유명사 및 숫자
         nlp = model_manager.load_stanza(main_lang, processors='tokenize,pos')
-        pos_candidates = []
         if nlp:
             doc = nlp(text)
             for sent in doc.sentences:
                 for word in sent.words:
-                    if word.upos in ['PROPN', 'NUM', 'X']:
-                        pos_candidates.append({"word": word.text, "upos": word.upos, "context": sent.text})
+                    if word.upos in ['PROPN', 'X']: # 고유명사 위주
+                        candidates.append((word.text, "PROPN"))
+                    elif word.upos == 'NUM' and len(word.text) > 1: # 숫자 (나이 등)
+                        candidates.append((word.text, "NUM"))
             model_manager.unload_stanza()
-        
+            
+        # [Step 3] 확장 및 정제 (Refinement)
         success, msg = model_manager.load_llm()
         if not success: return "Error", "N/A", [], msg
         
-        final_results = []
-        # 1. 고정 정규식 선점 (Phone, Email, PCC)
-        for m in PHONE_REGEX.finditer(text): final_results.append((m.group(), "PHONE"))
-        for m in EMAIL_REGEX.finditer(text): final_results.append((m.group(), "EMAIL"))
-        for m in PCC_REGEX.finditer(text): final_results.append((m.group(), "PCC"))
+        # 1차 중복 제거 (타입 무관하게 텍스트 위주)
+        initial_cands = list(set(candidates))
         
-        # 2. 주소 및 운송장번호 선점
-        for cand in address_candidates + tracking_candidates:
-            if verify_with_llm(cand["word"], cand["type"], cand["context"]):
-                if not any(cand["word"] in str(r[0]) for r in final_results):
-                    final_results.append((cand["word"], cand["type"]))
-                
-        # 3. 기타 POS 후보
-        for cand in pos_candidates:
-            word = cand["word"]
-            if any(word in str(r[0]) for r in final_results): continue
-            label = classify_pii_with_pos(word, cand["upos"], cand["context"], main_lang)
-            if label: final_results.append((word, label))
+        # HINT 기반 2차 확장 (이름/주소 범위 넓히기)
+        refined_cands = refine_entities_with_hint(text, initial_cands, main_lang)
+        
+        # [Step 4] 문맥 기반 최종 라벨 확정 (Contextual Labeling)
+        # 사용자 요청: 라벨링을 먼저 한 후 마스킹 진행
+        final_entities = finalize_contextual_labels(text, refined_cands, main_lang)
 
-        # [신규] 2단계 HINT 기반 성/이름 정밀 추론
-        final_results = refine_names_with_hint(text, final_results, main_lang)
-
-        # [4] 마스킹
-        unique_entities = sorted(list(set(final_results)), key=lambda x: len(str(x[0])), reverse=True)
+        # [Step 5] 최종 마스킹 (Masking)
+        unique_entities = sorted(list(set(final_entities)), key=lambda x: len(str(x[0])), reverse=True)
         masked_text = text
         for word, p_type in unique_entities:
+            # 마스킹 예외: 너무 짧은 단어는 제외 (단, 정규식 매칭 제외)
+            if len(word) < 2 and not any(t in p_type for t in ["PHONE", "EMAIL", "PCC"]): continue
+            
             if minimize_address:
-                if p_type in ["STREET", "ZIPCODE", "ADDRESS", "PCC", "TRACKING_NUMBER"]:
+                if any(t in p_type for t in ["STREET", "ZIPCODE", "ADDRESS", "PCC", "TRACKING_NUMBER"]):
                     masked_text = masked_text.replace(word, mask_char * len(word))
                 elif any(word.endswith(s) for s in ["구", "군", "읍", "면", "동"]):
                     masked_text = masked_text.replace(word, mask_char * len(word))
