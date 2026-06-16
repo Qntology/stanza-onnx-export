@@ -185,5 +185,15 @@ class ModelManager:
             }
         return status
 
+    def get_installed_stanza_models(self):
+        """설치된 언어 코드 목록 반환"""
+        from config import SUPPORTED_LANGUAGES
+        installed = []
+        for lang in SUPPORTED_LANGUAGES.keys():
+            stanza_lang = 'zh-hans' if lang == 'zh' else lang
+            if self.is_stanza_installed(stanza_lang):
+                installed.append(lang)
+        return installed
+
 # 싱글톤 인스턴스
 model_manager = ModelManager()

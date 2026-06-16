@@ -16,7 +16,13 @@ PII Shield Global은 텍스트 내의 개인정보(PII)를 자동으로 감지�
 python app.py
 ```
 
-### 2. CLI (Command Line Interface)
+### 2. Desktop/Web UI (Flet) - NEW!
+더 현대적이고 빠른 인터페이스를 원하시면 `app_flet.py`를 실행하세요. (데스크탑 앱 및 웹 지원)
+```bash
+python app_flet.py
+```
+
+### 3. CLI (Command Line Interface)
 터미널에서 직접 처리하거나 자동화 스크립트에 연동하려면 `cli.py`를 사용하세요.
 ```bash
 python cli.py "처리할 텍스트"
@@ -25,7 +31,7 @@ python cli.py "처리할 텍스트"
 
 ## 설치 및 요구 사항
 - Python 3.10+
-- 필요한 라이브러리: `gradio`, `stanza`, `llama-cpp-python`, `langdetect` 등
+- 필요한 라이브러리: `flet`, `gradio`, `stanza`, `llama-cpp-python`, `langdetect` 등
 - 모델 파일: Hugging Face를 통해 자동으로 다운로드됩니다.
 
 ## 파일 구조

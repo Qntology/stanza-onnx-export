@@ -1,5 +1,5 @@
 import gradio as gr
-from config import MODEL_NAME, HF_MODEL_URL, SUPPORTED_LANGUAGES
+from config import MODEL_NAME, GGUF_MODEL_URL, SUPPORTED_LANGUAGES
 from model_manager import model_manager
 from processor import process_pii
 
@@ -24,7 +24,7 @@ def get_installed_status():
 # Gradio UI 구성
 with gr.Blocks(title="PII Shield Global v4 (Granite)") as demo:
     gr.Markdown(f"""# 🛡️ PII Shield Global v4
-### Powered by [IBM Granite-4.0-350M]({HF_MODEL_URL}) & Stanza Multi-NLP""")
+### Powered by [IBM Granite-4.0-350M]({GGUF_MODEL_URL}) & Stanza Multi-NLP""")
     
     with gr.Tabs():
         with gr.TabItem("Shield Execution"):
@@ -71,7 +71,7 @@ with gr.Blocks(title="PII Shield Global v4 (Granite)") as demo:
             
             gr.Markdown(f"""### 🤖 LLM Model Info
 - **Model:** `{MODEL_NAME}`
-- **Hugging Face:** [Link]({HF_MODEL_URL})
+- **Hugging Face:** [Link]({GGUF_MODEL_URL})
 - **Status:** {'🟢 Loaded' if model_manager.model else '🔴 Not Loaded'}
 
 *만약 모델이 로드되지 않았다면, 인터넷 연결을 확인하거나 Hugging Face 로그인이 필요한지 확인하세요.*
