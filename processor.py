@@ -211,7 +211,12 @@ def process_pii(text, mask_char="*", minimize_address=False):
     with _processing_lock:
         if not text: return "Empty", "N/A", [], "Idle"
         
-        # 1. 전처리 (Tokenization 향상)
+        # 0. 고신뢰 패턴 (Email, Phone 등) 원본에서 직접 추출 (Preprocessing 전)
+        raw_candidates = []
+        for m in EMAIL_REGEX.finditer(text):
+            raw_candidates.append((m.group(), "EMAIL"))
+        
+        # 1. 전처리 (Stanza/LLM용 - 구두점 공백 추가)
         clean_text = preprocess_text(text)
         main_lang, _ = get_best_language(clean_text)
         
@@ -220,9 +225,8 @@ def process_pii(text, mask_char="*", minimize_address=False):
         if not nlp: return "Error", "N/A", [], "Stanza Load Failed"
         
         doc = nlp(clean_text)
-        candidates = []
+        candidates = list(raw_candidates) # 원본에서 추출한 이메일 등 포함
         
-        # 앵커 기반 주소 스캔 및 구문 분석 활용
         for sent in doc.sentences:
             # (1) 주소 앵커 및 숫자 패턴
             addr_cands = scan_address_candidates(sent.text, main_lang)
@@ -238,9 +242,7 @@ def process_pii(text, mask_char="*", minimize_address=False):
                 if word.upos in ['PROPN', 'X']:
                     candidates.append((word.text, "PROPN"))
         
-        # (3) 강력한 패턴 (전화, 이메일 등) 직접 추가
-        for m in EMAIL_REGEX.finditer(clean_text):
-            candidates.append((m.group(), "EMAIL"))
+        # (3) 기타 패턴 (전화, PCC 등)
         phone_regex = PHONE_REGEX_MAP.get(main_lang, PHONE_REGEX_MAP["default"])
         for m in phone_regex.finditer(clean_text):
             candidates.append((m.group(), "PHONE"))
@@ -255,12 +257,15 @@ def process_pii(text, mask_char="*", minimize_address=False):
         
         # 중복 제거 및 구문 기반 정교화
         unique_cands = list(set(candidates))
+        # refined_cands 작업 시 이메일 등은 원본 텍스트 기준으로 찾기 위해 주의 필요
+        # 여기서는 clean_text와 text가 다를 수 있으므로, 최종 치환은 text(원본) 혹은 clean_text에서 하되 일관성 유지
+        
+        # 일단 clean_text 기준으로 처리하되, 이메일은 이미 candidates에 들어가 있음
         refined_cands = refine_entities_with_hint(clean_text, unique_cands, main_lang)
         final_entities = finalize_contextual_labels(clean_text, refined_cands, main_lang)
         
-        # 4. 마스킹 (Policy-based)
+        # 4. 마스킹 (Policy-based) - 원본 텍스트(text)가 아닌 clean_text에서 치환 후 postprocess
         masked_text = clean_text
-        # 긴 단어부터 치환하여 부분 포함 관계 오류 방지
         unique_entities = sorted(list(set(final_entities)), key=lambda x: len(str(x[0])), reverse=True)
         
         for word, full_type in unique_entities:
@@ -268,18 +273,14 @@ def process_pii(text, mask_char="*", minimize_address=False):
             
             replacement = mask_char * len(word)
             
-            # 주소 최소화 정책 적용
             if minimize_address and "ADDRESS" in full_type:
                 if "|" in full_type:
-                    # LLM이 구분해준 파트 활용
                     try:
                         detail_part = full_type.split("|")[1].strip()
                         if detail_part in word and len(detail_part) > 1:
-                            # 상세 주소 부분만 마스킹
                             replacement = word.replace(detail_part, mask_char * len(detail_part))
                     except: pass
                 else:
-                    # 기본 규칙: 공백 기준 뒤쪽 파트 마스킹
                     parts = word.split()
                     if len(parts) > 2:
                         replacement = " ".join(parts[:2]) + " " + " ".join([mask_char * len(p) for p in parts[2:]])
