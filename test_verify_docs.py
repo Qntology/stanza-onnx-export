@@ -27,6 +27,8 @@ def run_verification():
             result = subprocess.run(cmd, input=content, capture_output=True, text=True, encoding="utf-8", errors="replace")
             
             if result.returncode == 0:
+                if result.stderr:
+                    print(f"DEBUG stderr:\n{result.stderr}")
                 output_json = json.loads(result.stdout)
                 
                 # Save to test_results

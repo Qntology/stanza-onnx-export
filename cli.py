@@ -3,8 +3,15 @@ import sys
 import json
 import os
 import glob
+import io
 from processor import process_pii
 from model_manager import model_manager
+
+# stdin/stdout UTF-8 강제 (Windows 대응)
+if sys.stdin.encoding != 'utf-8':
+    sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 def process_single_text(text, args):
     """단일 텍스트를 처리하고 결과를 반환"""

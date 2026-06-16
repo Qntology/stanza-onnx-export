@@ -219,8 +219,6 @@ def process_pii(text, mask_char="*", minimize_address=False):
         # [Step 1] 전처리
         text = preprocess_text(text)
         main_lang, _ = get_best_language(text)
-        import sys
-        print(f"DEBUG: main_lang detected as {main_lang}", file=sys.stderr)
         
         # [Step 2] Stanza를 이용한 문장 분할 및 POS/Dependency 분석 (고도화)
         nlp = model_manager.load_stanza(main_lang)
