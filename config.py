@@ -6,22 +6,28 @@ GGUF_MODEL_URL = "https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/res
 LLM_MODELS_DIR = os.path.join(os.getenv('APPDATA'), 'pii-models')
 GGUF_MODEL_PATH = os.path.join(LLM_MODELS_DIR, MODEL_NAME)
 
+# [신규] 언어 레지스트리 (Registry)
+# 지원 언어: English, German, Spanish, French, Japanese, Portuguese, Arabic, Czech, Italian, Korean, Dutch, and Chinese
+LANG_REGISTRY = {
+    "ko": {"name": "Korean", "prefix": "KO", "scripts": ["Hangul"]},
+    "en": {"name": "English", "prefix": "EN", "scripts": ["Latin"]},
+    "de": {"name": "German", "prefix": "DE", "scripts": ["Latin"]},
+    "es": {"name": "Spanish", "prefix": "ES", "scripts": ["Latin"]},
+    "fr": {"name": "French", "prefix": "FR", "scripts": ["Latin"]},
+    "ja": {"name": "Japanese", "prefix": "JA", "scripts": ["Hiragana", "Katakana", "Kanji"]},
+    "pt": {"name": "Portuguese", "prefix": "PT", "scripts": ["Latin"]},
+    "ar": {"name": "Arabic", "prefix": "AR", "scripts": ["Arabic"]},
+    "cs": {"name": "Czech", "prefix": "CS", "scripts": ["Latin"]},
+    "it": {"name": "Italian", "prefix": "IT", "scripts": ["Latin"]},
+    "nl": {"name": "Dutch", "prefix": "NL", "scripts": ["Latin"]},
+    "zh": {"name": "Chinese", "prefix": "ZH", "scripts": ["Han", "Kanji"]}
+}
+
 # 2. Stanza 설정
 STANZA_RESOURCES_DIR = os.path.join(os.getenv('APPDATA'), 'xtanza')
 
-# 지원하는 주요 언어 코드 (Stanza 기준)
-SUPPORTED_LANGUAGES = {
-    "ko": "Korean",
-    "en": "English",
-    "zh-hans": "Chinese (Simplified)",
-    "ja": "Japanese",
-    "fr": "French",
-    "de": "German",
-    "es": "Spanish",
-    "it": "Italian",
-    "vi": "Vietnamese",
-    "th": "Thai"
-}
+# 지원하는 주요 언어 코드 (UI 연동용)
+SUPPORTED_LANGUAGES = {k: v["name"] for k, v in LANG_REGISTRY.items()}
 
 # 3. 다국어 주소 키워드 및 패턴 사전
 # 'Address-First' 전략을 위해 admin(행정구역)과 street(도로명) 키워드 세분화
