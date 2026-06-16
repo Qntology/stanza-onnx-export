@@ -41,9 +41,11 @@ def test_long_complex_text():
     """
 
         f.write(f"\n[Original Text Length]: {len(long_text)} chars\n")
-        f.write("\nProcessing... (Decomposing and Analyzing units)\n")
+        print(f"Processing text ({len(long_text)} chars)...")
         
         masked_text, pos_info, entities, dl_status = process_pii(long_text, minimize_address=True)
+        
+        print("Processing complete.")
         
         f.write(f"\n[Address Minimization]: Enabled\n")
         f.write(f"[Detection Status]: {dl_status}\n")

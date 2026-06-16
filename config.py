@@ -1,9 +1,11 @@
 import os
 
-# 1. LLM 모델 설정
-# 사용자가 지정한 IBM Granite 350M 모델
-MODEL_NAME = "ibm-granite/granite-4.0-350m"
-HF_MODEL_URL = f"https://huggingface.co/{MODEL_NAME}"
+# 1. LLM 모델 설정 (GGUF 기반)
+MODEL_NAME = "granite-4.0-h-350m-Q8_0.gguf"
+GGUF_MODEL_URL = "https://huggingface.co/ibm-granite/granite-4.0-h-350m-GGUF/resolve/main/granite-4.0-h-350m-Q8_0.gguf"
+# 모델 저장 경로 (AppData/Roaming/pii-models)
+LLM_MODELS_DIR = os.path.join(os.getenv('APPDATA'), 'pii-models')
+GGUF_MODEL_PATH = os.path.join(LLM_MODELS_DIR, MODEL_NAME)
 
 # 2. Stanza 설정
 # 사용자가 요청한 AppData/Roaming/xtanza 경로로 변경
