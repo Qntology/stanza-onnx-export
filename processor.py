@@ -154,29 +154,42 @@ def finalize_contextual_labels(text, entities, main_lang):
     
     unique_words = sorted(list(set([e[0] for e in entities])), key=len, reverse=True)
     
+    # 카테고리 맵핑 보조 (이미 분류된 경우 LLM 생략 가능하게)
+    pre_classified = {word: p_type for word, p_type in entities if p_type in ["PHONE", "EMAIL", "PCC", "TRACKING_NUMBER", "ZIPCODE"]}
+
     for word in unique_words:
+        # 이미 정규식 등으로 확정된 타입은 그대로 사용
+        if word in pre_classified:
+            from utils import get_best_language
+            word_lang, _ = get_best_language(word)
+            lang_info = LANG_REGISTRY.get(word_lang, LANG_REGISTRY.get(main_lang, {"name": "Unknown", "prefix": "UN"}))
+            final_entities.append((word, f"{lang_info['prefix']}_{pre_classified[word]}"))
+            continue
+
         # 단어의 지배적 언어 재확인
         from utils import get_best_language
         word_lang, _ = get_best_language(word)
         lang_info = LANG_REGISTRY.get(word_lang, LANG_REGISTRY.get(main_lang, {"name": "Unknown", "prefix": "UN"}))
         tag_prefix = lang_info["prefix"]
         
-        # 문맥 추출 (충분히 넓게)
+        # 문맥 추출
         idx = text.find(word)
         if idx == -1: continue
-        context = text[max(0, idx-40):min(len(text), idx+len(word)+40)]
+        context = text[max(0, idx-50):min(len(text), idx+len(word)+50)]
         
         prompt = f"""<|start_of_role|>system<|end_of_role|>Task: PII Classification
 Context: ...{context}...
 Word: '{word}'
 Question: In this context, is '{word}' a:
-1. PERSON (Name)
-2. ORGANIZATION (Team, Company, Club)
-3. LOCATION (City, Country)
-4. ADDRESS (Street, Building)
-5. NONE (Not PII)
+1. PERSON (Name of a person)
+2. ORGANIZATION (Company, Team, Club, Agency)
+3. LOCATION (City, Country, Region)
+4. ADDRESS (Street name, Building name/number, Apartment)
+5. PHONE (Phone number)
+6. EMAIL (Email address)
+7. NONE (Not a PII entity)
 
-Rules: Return ONLY the category name. If unsure but it looks like a Proper Noun, choose PERSON or ORGANIZATION.
+Rules: Return ONLY the category name. If it's a specific number like a tracking number or ID, choose NONE if not in list.
 <|start_of_role|>user<|end_of_role|>Word: {word}
 <|start_of_role|>assistant<|end_of_role|>
 Category:"""
@@ -206,9 +219,11 @@ def process_pii(text, mask_char="*", minimize_address=False):
         # [Step 1] 전처리
         text = preprocess_text(text)
         main_lang, _ = get_best_language(text)
+        import sys
+        print(f"DEBUG: main_lang detected as {main_lang}", file=sys.stderr)
         
         # [Step 2] Stanza를 이용한 문장 분할 및 POS/Dependency 분석 (고도화)
-        nlp = model_manager.load_stanza(main_lang, processors='tokenize,pos,lemma,depparse')
+        nlp = model_manager.load_stanza(main_lang)
         if not nlp: return "Error", "N/A", [], "Stanza Load Failed"
         
         doc = nlp(text)
@@ -274,4 +289,4 @@ def process_pii(text, mask_char="*", minimize_address=False):
             else:
                 masked_text = masked_text.replace(word, mask_char * len(word))
                 
-        return masked_text, f"Lang: {main_lang}", unique_entities, "✨ Linguistic PII Detection Complete"
+        return masked_text, f"Lang: {main_lang}", unique_entities, "Linguistic PII Detection Complete"

@@ -14,32 +14,46 @@ def analyze_unicode_script(text):
         return {"main": "en", "sub": []}
 
     scores = {
-        "ko": 0,    # 한글
-        "zh-hans": 0, # 한자 (중국어 간체 중심)
-        "ja": 0,    # 일본어 (히라가나/가타카나)
-        "en": 0,    # 라틴 (영어/유럽어)
+        "ko": 0,      # 한글
+        "zh-hans": 0, # 한자 (중국어 간체)
+        "ja": 0,      # 일본어 (히라가나/가타카나)
+        "en": 0,      # 라틴 (영어/유럽어)
+        "ar": 0,      # 아랍어
+        "cs": 0,      # 체코어 (라틴 확장이지만 별도 처리 필요시)
         "other": 0
     }
 
     for char in text:
         cp = ord(char)
-        # 한글: 0xAC00 ~ 0xD7A3
-        if 0xAC00 <= cp <= 0xD7A3:
-            scores["ko"] += 1
-        # 한자 (CJK Unified Ideographs): 0x4E00 ~ 0x9FFF
-        elif 0x4E00 <= cp <= 0x9FFF:
-            # 일본어 텍스트에도 한자가 섞이므로, 나중에 ja 점수와 결합 로직 필요할 수 있음
-            scores["zh-hans"] += 1
+        # 한글: 0xAC00 ~ 0xD7A3, 0x1100 ~ 0x11FF (자음/모음)
+        if (0xAC00 <= cp <= 0xD7A3) or (0x1100 <= cp <= 0x11FF):
+            scores["ko"] += 2 # 한글은 특징이 강하므로 가중치
         # 일본어 (히라가나/가타카나): 0x3040 ~ 0x30FF
         elif 0x3040 <= cp <= 0x30FF:
-            scores["ja"] += 1
-        # 영어/라틴: 0x0041~0x005A, 0x0061~0x007A
-        elif (0x0041 <= cp <= 0x005A) or (0x0061 <= cp <= 0x007A):
+            scores["ja"] += 2 # 일본어 전용 문자 가중치
+        # 한자 (CJK Unified Ideographs): 0x4E00 ~ 0x9FFF
+        elif 0x4E00 <= cp <= 0x9FFF:
+            # 일본어 전용 문자가 이미 발견되었다면 ja로 가산, 아니면 zh
+            if scores["ja"] > 0:
+                scores["ja"] += 1
+            else:
+                scores["zh-hans"] += 1
+        # 아랍어: 0x0600 ~ 0x06FF
+        elif 0x0600 <= cp <= 0x06FF:
+            scores["ar"] += 2
+        # 영어/라틴 (기본 + 확장): 0x0041~0x005A, 0x0061~0x007A, 0x00C0~0x00FF
+        elif (0x0041 <= cp <= 0x005A) or (0x0061 <= cp <= 0x007A) or (0x00C0 <= cp <= 0x00FF):
             scores["en"] += 1
         else:
-            scores["other"] += 1
+            if not char.isspace() and not char.isdigit() and char not in '.,!?()[]{}<>:;@#$%^&*-=_+|/\\\'"':
+                scores["other"] += 1
 
-    # 점수 순으로 정렬
+    # 점수 순으로 정렬 (ja/zh-hans 재검증: ja 점수가 있고 zh-hans 점수가 있으면 합산하여 ja로 판단할지 결정)
+    if scores["ja"] > 0 and scores["zh-hans"] > 0:
+        # 일본어 텍스트에 섞인 한자 처리
+        scores["ja"] += scores["zh-hans"]
+        scores["zh-hans"] = 0
+
     sorted_langs = sorted(
         [(k, v) for k, v in scores.items() if v > 0 and k != "other"],
         key=lambda x: x[1],
@@ -61,15 +75,19 @@ def get_best_language(text):
     analysis = analyze_unicode_script(text)
     
     try:
+        # langdetect는 문장이 길면 신뢰도가 높지만 짧으면 유니코드가 더 정확함
         ld_lang = detect(text)
+        # langdetect 결과를 보조로 사용
+        if ld_lang == 'zh-cn': ld_lang = 'zh-hans'
+        if ld_lang == 'zh-tw': ld_lang = 'zh-hant'
     except:
         ld_lang = "en"
 
-    # Stanza 코드 매핑 보정
-    mapping = {"ko": "ko", "en": "en", "zh": "zh-hans", "ja": "ja", "fr": "fr", "de": "de"}
+    # 유니코드 분석 결과를 최우선으로 함
+    final_main = analysis["main"]
     
-    # 유니코드 분석 결과를 우선순위에 둠 (특히 혼합 언어의 경우)
-    final_main = mapping.get(analysis["main"], analysis["main"])
-    
-    # langdetect 결과가 SUPPORTED_LANGUAGES에 있고 유니코드 분석과 다를 경우 sub에 추가 검토 가능
+    # 예외 처리: 유니코드가 'en'인데 langdetect가 명확히 다른 유럽어(es, fr, de 등)를 찍으면 변경
+    if final_main == "en" and ld_lang in ["es", "fr", "de", "it", "pt", "nl", "cs", "ar"]:
+        final_main = ld_lang
+
     return final_main, analysis["sub"]

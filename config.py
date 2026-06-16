@@ -9,18 +9,18 @@ GGUF_MODEL_PATH = os.path.join(LLM_MODELS_DIR, MODEL_NAME)
 # [신규] 언어 레지스트리 (Registry)
 # 지원 언어: English, German, Spanish, French, Japanese, Portuguese, Arabic, Czech, Italian, Korean, Dutch, and Chinese
 LANG_REGISTRY = {
-    "ko": {"name": "Korean", "prefix": "KO", "scripts": ["Hangul"]},
-    "en": {"name": "English", "prefix": "EN", "scripts": ["Latin"]},
-    "de": {"name": "German", "prefix": "DE", "scripts": ["Latin"]},
-    "es": {"name": "Spanish", "prefix": "ES", "scripts": ["Latin"]},
-    "fr": {"name": "French", "prefix": "FR", "scripts": ["Latin"]},
-    "ja": {"name": "Japanese", "prefix": "JA", "scripts": ["Hiragana", "Katakana", "Kanji"]},
-    "pt": {"name": "Portuguese", "prefix": "PT", "scripts": ["Latin"]},
-    "ar": {"name": "Arabic", "prefix": "AR", "scripts": ["Arabic"]},
-    "cs": {"name": "Czech", "prefix": "CS", "scripts": ["Latin"]},
-    "it": {"name": "Italian", "prefix": "IT", "scripts": ["Latin"]},
-    "nl": {"name": "Dutch", "prefix": "NL", "scripts": ["Latin"]},
-    "zh": {"name": "Chinese", "prefix": "ZH", "scripts": ["Han", "Kanji"]}
+    "ko": {"name": "Korean", "prefix": "KO", "scripts": ["Hangul"], "processors": "tokenize,pos,lemma,depparse"},
+    "en": {"name": "English", "prefix": "EN", "scripts": ["Latin"], "processors": "tokenize,mwt,pos,lemma,depparse"},
+    "de": {"name": "German", "prefix": "DE", "scripts": ["Latin"], "processors": "tokenize,mwt,pos,lemma,depparse"},
+    "es": {"name": "Spanish", "prefix": "ES", "scripts": ["Latin"], "processors": "tokenize,mwt,pos,lemma,depparse"},
+    "fr": {"name": "French", "prefix": "FR", "scripts": ["Latin"], "processors": "tokenize,mwt,pos,lemma,depparse"},
+    "ja": {"name": "Japanese", "prefix": "JA", "scripts": ["Hiragana", "Katakana", "Kanji"], "processors": "tokenize,pos,lemma,depparse"},
+    "pt": {"name": "Portuguese", "prefix": "PT", "scripts": ["Latin"], "processors": "tokenize,mwt,pos,lemma,depparse"},
+    "ar": {"name": "Arabic", "prefix": "AR", "scripts": ["Arabic"], "processors": "tokenize,mwt,pos,lemma,depparse"},
+    "cs": {"name": "Czech", "prefix": "CS", "scripts": ["Latin"], "processors": "tokenize,pos,lemma,depparse"},
+    "it": {"name": "Italian", "prefix": "IT", "scripts": ["Latin"], "processors": "tokenize,mwt,pos,lemma,depparse"},
+    "nl": {"name": "Dutch", "prefix": "NL", "scripts": ["Latin"], "processors": "tokenize,mwt,pos,lemma,depparse"},
+    "zh": {"name": "Chinese", "prefix": "ZH", "scripts": ["Han", "Kanji"], "processors": "tokenize,pos,lemma,depparse"}
 }
 
 # 2. Stanza 설정
