@@ -1,0 +1,327 @@
+{
+  "masked_text": "VERTRAULICH: ************** *********** * * ********* & ******** ******: *********** ***********: ************** - Reisepass: L7******* **************: G********* * * ************ ***-Mail: **** *****************-industrie-** * ** *********: +*9 *0 ******** *********: ********* ***** *, ***** ****** * * ******** & ********* ****************: ******************( ***) - ***-****: ***** *********: \"********* bitte ** ***** * * Der **** für das Haupttor ist 08** * \" * ************* ******: **** **** **** **** **** ** *****: ******** *************: **** **** **** **** * * ************************ *********: *9* ***** *** ***** - ***-Adresse: 08:00:*7:00:A6:*9 - Geräte-ID: ************** *6 * **** *0*6",
+  "language_info": "Lang: de",
+  "entities": [
+    {
+      "word": "hans.mueller@deutsch-industrie-ag.de",
+      "type": "DE_EMAIL"
+    },
+    {
+      "word": "DIGITALE IDENTIFIKATOREN",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "JD0123456789012345",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": ". mueller@deutsch",
+      "type": "DE_EMAIL"
+    },
+    {
+      "word": "- Sendungsnummer",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "012345678901234",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "IDENTIFIKATOREN",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Sendungsnummer",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "12 345 678 901",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "PROJEKTBERICHT",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "AND-9988776655",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- Führerschein",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- Kreditkarte",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": ". FINANZDATEN",
+      "type": "DE_EMAIL"
+    },
+    {
+      "word": "KONTAKTDATEN",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- Steuer-ID",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "FINANZDATEN",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Kreditkarte",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- ERWEITERT",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Hans Müller",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- Host-IP",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- Telefon",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- Adresse",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "IDENTITÄT",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Lieferung",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Steuer-ID",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- Hinweis",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "LIEFERUNG",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "ERWEITERT",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "012345678",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "Potsdamer",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "12345678",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "LOGISTIK",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "AUSWEISE",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "DEUTDEBB",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "DIGITALE",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Host-IP",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Telefon",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Hinweis",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Berlin",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- IBAN",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Müller",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- Name",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- BIC",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Platz",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "5566#",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": ". 168",
+      "type": "DE_EMAIL"
+    },
+    {
+      "word": "Rampe",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "10785",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": ". 100",
+      "type": "DE_EMAIL"
+    },
+    {
+      "word": "8901",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "Hans",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "2345",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "hans",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "IBAN",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "4567",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "5678",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "3456",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Code",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "Juni",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "1234",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "DE12",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "7890",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "DHL",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "BIC",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "MAC",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "- E",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": ". 1",
+      "type": "DE_EMAIL"
+    },
+    {
+      "word": "Tor",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "an",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "de",
+      "type": "DE_PROPN"
+    },
+    {
+      "word": "90",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "ag",
+      "type": "DE_EMAIL"
+    },
+    {
+      "word": "2",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "3",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "4",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "5",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": "1",
+      "type": "DE_PHONE"
+    },
+    {
+      "word": ".",
+      "type": "DE_EMAIL"
+    },
+    {
+      "word": "-",
+      "type": "DE_PROPN"
+    }
+  ],
+  "status": "PII Tiered Processing Complete"
+}

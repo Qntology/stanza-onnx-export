@@ -1,0 +1,354 @@
+# =============================================================================
+# Before you start changing anything here, read the comments.
+# All of them can be found below in the "DEFAULT" section
+
+[DEFAULT]
+
+# The directory that contains extracted files of everything you've downloaded.
+data_dir = "data/coref"
+
+# where to put checkpoints and final models
+save_dir = "saved_models/coref"
+save_name = "bert-large-cased"
+
+# Train, dev and test jsonlines
+# train_data = "data/coref/en_gum-ud.train.nosgl.json"
+# dev_data = "data/coref/en_gum-ud.dev.nosgl.json"
+# test_data = "data/coref/en_gum-ud.test.nosgl.json"
+
+train_data = "data/coref/corefud_concat_v1_0_langid.train.json"
+dev_data = "data/coref/corefud_concat_v1_0_langid.dev.json"
+test_data = "data/coref/corefud_concat_v1_0_langid.dev.json"
+
+#train_data = "data/coref/english_train_head.jsonlines"
+#dev_data = "data/coref/english_development_head.jsonlines"
+#test_data = "data/coref/english_test_head.jsonlines"
+
+# do not use the full pairwise encoding scheme
+full_pairwise = false
+
+# The device where everything is to be placed. "cuda:N"/"cpu" are supported.
+device = "cuda:0"
+
+save_each_checkpoint = false
+log_norms = false
+
+# Bert settings ======================
+
+# Base bert model architecture and tokenizer
+bert_model = "bert-large-cased"
+
+# Controls max length of sequences passed through bert to obtain its
+# contextual embeddings
+# Must be less than or equal to 512
+bert_window_size = 512
+
+# General model settings =============
+
+# Controls the dimensionality of feature embeddings
+embedding_size = 20
+
+# Controls the dimensionality of distance embeddings used by SpanPredictor
+sp_embedding_size = 64
+
+# Controls the number of spans for which anaphoricity can be scores in one
+# batch. Only affects final scoring; mention extraction and rough scoring
+# are less memory intensive, so they are always done in just one batch.
+a_scoring_batch_size = 128
+
+# AnaphoricityScorer FFNN parameters
+hidden_size = 1024
+n_hidden_layers = 1
+
+# Do you want to support singletons?
+singletons = true
+
+
+# Mention extraction settings ========
+
+# Mention extractor will check spans up to max_span_len words
+# The default value is chosen to be big enough to hold any dev data span
+max_span_len = 64
+
+
+# Pruning settings ===================
+
+# Controls how many pairs should be preserved per mention
+# after applying rough scoring.
+rough_k = 50
+
+
+# Lora settings ===================
+
+# LoRA settings
+lora = false
+lora_alpha = 128
+lora_dropout = 0.1
+lora_rank = 64
+lora_target_modules = []
+lora_modules_to_save = []
+
+
+# Training settings ==================
+
+# Controls whether the first dummy node predicts cluster starts or singletons
+clusters_starts_are_singletons = true
+
+# Controls whether to fine-tune bert_model
+bert_finetune = true
+
+# Controls the dropout rate throughout all models
+dropout_rate = 0.3
+
+# Bert learning rate (only used if bert_finetune is set)
+bert_learning_rate = 1e-6
+bert_finetune_begin_epoch = 0.5
+
+# Task learning rate
+learning_rate = 3e-4
+
+# For how many epochs the training is done
+train_epochs = 32
+
+# plateau for this many epochs = early terminate
+plateau_epochs = 0
+
+# Controls the weight of binary cross entropy loss added to nlml loss
+bce_loss_weight = 0.5
+
+# The directory that will contain conll prediction files
+conll_log_dir = "data/conll_logs"
+
+# Skip any documents longer than this length
+max_train_len = 5000
+
+# if this is set to false, the model will set its zero_predictor to, well, 0
+use_zeros = true
+
+# two different methods for specifying how to weaken the LR for certain languages
+# however, in their current forms, on an HE experiment, neither worked
+# better than just mixing the two datasets together unweighted
+# Starting from the HE IAHLT dataset, and possibly mixing in the ger/rom ud coref,
+# averaging over 5 different seeds, we got the following results:
+#   HE only:    0.497
+#   Attenuated: 0.508
+#   Scaled:     0.517
+#   Mixed:      0.517
+# the attenuation scheme for that experiment was 1/epoch
+# These were the settings
+#   --lang_lr_weights es=0.2,en=0.2,de=0.2,ca=0.2,fr=0.2,no=0.2
+#   --lang_lr_attenuation es,en,de,ca,fr,no
+lang_lr_attenuation = ""
+lang_lr_weights = ""
+
+# =============================================================================
+# Extra keyword arguments to be passed to bert tokenizers of specified models
+[DEFAULT.tokenizer_kwargs]
+    [DEFAULT.tokenizer_kwargs.roberta-large]
+        "add_prefix_space" = true
+
+    [DEFAULT.tokenizer_kwargs.xlm-roberta-large]
+        "add_prefix_space" = true
+
+    [DEFAULT.tokenizer_kwargs.spanbert-large-cased]
+        "do_lower_case" = false
+
+    [DEFAULT.tokenizer_kwargs.bert-large-cased]
+        "do_lower_case" = false
+
+# =============================================================================
+# The sections listed here do not need to make use of all config variables
+# If a variable is omitted, its default value will be used instead
+
+[roberta]
+bert_model = "roberta-large"
+
+[roberta_lora]
+bert_model = "roberta-large"
+bert_learning_rate = 0.00005
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[scandibert_lora]
+bert_model = "vesteinn/ScandiBERT"
+bert_learning_rate = 0.0002
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[xlm_roberta]
+bert_model = "FacebookAI/xlm-roberta-large"
+bert_learning_rate = 0.00001
+bert_finetune = true
+
+[xlm_roberta_lora]
+bert_model = "FacebookAI/xlm-roberta-large"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[deeppavlov_slavic_bert_lora]
+bert_model = "DeepPavlov/bert-base-bg-cs-pl-ru-cased"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[deberta_lora]
+bert_model = "microsoft/deberta-v3-large"
+bert_learning_rate = 0.00001
+lora = true
+lora_target_modules = [ "query_proj", "value_proj", "output.dense" ]
+lora_modules_to_save = [  ]
+
+[electra]
+bert_model = "google/electra-large-discriminator"
+bert_learning_rate = 0.00002
+
+[electra_lora]
+bert_model = "google/electra-large-discriminator"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [  ]
+
+[hungarian_electra_lora]
+# TODO: experiment with tokenizer options for this to see if that's
+# why the results are so low using this transformer
+bert_model = "NYTK/electra-small-discriminator-hungarian"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [  ]
+
+[muril_large_cased_lora]
+bert_model = "google/muril-large-cased"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[muril_base_cased_lora]
+bert_model = "google/muril-base-cased"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[indic_bert_lora]
+bert_model = "ai4bharat/indic-bert"
+bert_learning_rate = 0.0005
+lora = true
+# indic-bert is an albert with repeating layers of different names
+lora_target_modules = [ "query", "value", "dense", "ffn", "full_layer" ]
+lora_modules_to_save = [ "pooler" ]
+
+[alephbertgimmel_lora]
+bert_model = "imvladikon/alephbertgimmel-base-512"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[alephbert_lora]
+bert_model = "onlplab/alephbert-base"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[hero_lora]
+# LR sweep on Hebrew IAHLT coref dev scores
+# (although there may be tokenization problems)
+# 0.000005    0.44202
+# 0.00001     0.45271
+# 0.000015    0.45771
+# 0.00002     0.45877
+# 0.000025    0.46076
+# 0.00003     0.45957
+# 0.000035    0.46187
+# 0.00004     0.46066
+# 0.000045    0.46132
+# 0.00005     0.46238
+# 0.000055    0.46084
+# 0.00006     0.46047
+# 0.000075    0.45772
+# 0.0001      0.44910
+bert_model = "HeNLP/HeRo"
+bert_learning_rate = 0.00005
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[bert_multilingual_cased_lora]
+# LR sweep on a Hindi dataset
+# 0.00001:  0.53238
+# 0.00002:  0.54012
+# 0.000025: 0.54206
+# 0.00003:  0.54050
+# 0.00004:  0.55081
+# 0.00005:  0.55135
+# 0.000075: 0.54482
+# 0.0001:   0.53888
+bert_model = "google-bert/bert-base-multilingual-cased"
+bert_learning_rate = 0.00005
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[t5_lora]
+bert_model = "google-t5/t5-large"
+bert_learning_rate = 0.000025
+bert_window_size = 1024
+lora = true
+lora_target_modules = [ "q", "v", "o", "wi", "wo" ]
+lora_modules_to_save = [  ]
+
+[mt5_lora]
+bert_model = "google/mt5-base"
+bert_learning_rate = 0.000025
+lora_alpha = 64
+lora_rank = 32
+lora = true
+lora_target_modules = [ "q", "v", "o", "wi", "wo" ]
+lora_modules_to_save = [  ]
+
+[deepnarrow_t5_xl_lora]
+bert_model = "google/t5-efficient-xl"
+bert_learning_rate = 0.00025
+lora = true
+lora_target_modules = [ "q", "v", "o", "wi", "wo" ]
+lora_modules_to_save = [  ]
+
+[roberta_no_finetune]
+bert_model = "roberta-large"
+bert_finetune = false
+
+[roberta_no_bce]
+bert_model = "roberta-large"
+bce_loss_weight = 0.0
+
+[spanbert]
+bert_model = "SpanBERT/spanbert-large-cased"
+
+[spanbert_no_bce]
+bert_model = "SpanBERT/spanbert-large-cased"
+bce_loss_weight = 0.0
+
+[bert]
+bert_model = "bert-large-cased"
+
+[longformer]
+bert_model = "allenai/longformer-large-4096"
+bert_window_size = 2048
+
+[debug]
+bert_window_size = 384
+bert_finetune = false
+device = "cpu:0"
+
+[debug_gpu]
+bert_window_size = 384
+bert_finetune = false

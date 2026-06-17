@@ -1,0 +1,119 @@
+{
+  "masked_text": "团队各位， 这是关于即将开始的**项目的正式报告。我们的主要联系人是**先生（***** ************* ****）。******************* 该项目涉及多个利益相关方，包括**市政府官员和当地社区领袖。我们还需要与李明（电话：****************）领导的安全团队进行协调。 请确保所有文件都发送至官方地址： **分公司 邮政编码 ****** *************** ****， ** 经理",
+  "language_info": "Lang: zh-hans",
+  "entities": [
+    {
+      "word": "zhang.wei@company.cn",
+      "type": "ZH_EMAIL"
+    },
+    {
+      "word": "他目前居住在北京市朝阳区建国路88号。",
+      "type": "ZH_ADDRESS"
+    },
+    {
+      "word": "+86 10 1234 5678",
+      "type": "ZH_PHONE"
+    },
+    {
+      "word": "北京市朝阳区建国路88号 中国",
+      "type": "ZH_ADDRESS"
+    },
+    {
+      "word": ". wei@company",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "100022 北京",
+      "type": "ZH_PHONE"
+    },
+    {
+      "word": "100022",
+      "type": "ZH_PHONE"
+    },
+    {
+      "word": "zhang",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": ". cn",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "5678",
+      "type": "ZH_PHONE"
+    },
+    {
+      "word": "顺颂",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "中国",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "目前",
+      "type": "ZH_ADDRESS"
+    },
+    {
+      "word": "张伟",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "朝阳",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "王强",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "建国",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "北京",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "商祺",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "居住",
+      "type": "ZH_ADDRESS"
+    },
+    {
+      "word": "明",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "他",
+      "type": "ZH_ADDRESS"
+    },
+    {
+      "word": "伟",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "市",
+      "type": "ZH_ADDRESS"
+    },
+    {
+      "word": "张",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "。",
+      "type": "ZH_ADDRESS"
+    },
+    {
+      "word": "李",
+      "type": "ZH_PROPN"
+    },
+    {
+      "word": "号",
+      "type": "ZH_ADDRESS"
+    }
+  ],
+  "status": "PII Tiered Processing Complete"
+}

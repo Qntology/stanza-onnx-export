@@ -1,0 +1,237 @@
+INFO:stanza:Checking for updates to resources.json in case models have been updated.  Note: this behavior can be turned off with download_method=None or download_method=DownloadMethod.REUSE_RESOURCES
+INFO:stanza:Downloaded file to C:\Users\HP\AppData\Local\StanfordNLP\stanza\Cache\1.12.0\resources\resources.json
+INFO:stanza:Loading these models for language: ko (Korean):
+==============================
+| Processor | Package        |
+------------------------------
+| tokenize  | kaist          |
+| pos       | kaist_nocharlm |
+| lemma     | kaist_nocharlm |
+| depparse  | kaist_nocharlm |
+==============================
+
+INFO:stanza:Using device: cuda
+INFO:stanza:Loading: tokenize
+INFO:stanza:Loading: pos
+INFO:stanza:Loading: lemma
+INFO:stanza:Loading: depparse
+INFO:stanza:Done loading processors!
+ERROR:root:pos 실패: Type 'Tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, str]' cannot be traced. Only Tensors and (possibly nested) Lists, Dicts, and Tuples of Tensors can be traced
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\jit_stanza_to_onnx.py", line 89, in aggressive_jit_convert
+    export_complex_model_jit(model, wrapper, proc_name, onnx_path, inputs, input_names)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\Desktop\stanza\jit_stanza_to_onnx.py", line 30, in export_complex_model_jit
+    traced_model = torch.jit.trace(wrapper, inputs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1000, in trace
+    traced_func = _trace_impl(
+        func,
+    ...<10 lines>...
+        _store_inputs,
+    )
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 696, in _trace_impl
+    return trace_module(
+        func,
+    ...<9 lines>...
+        _store_inputs=_store_inputs,
+    )
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1276, in trace_module
+    module._c._create_method_from_trace(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        method_name,
+        ^^^^^^^^^^^^
+    ...<6 lines>...
+        _store_inputs,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+RuntimeError: Type 'Tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, str]' cannot be traced. Only Tensors and (possibly nested) Lists, Dicts, and Tuples of Tensors can be traced
+
+ERROR:root:depparse 실패: Type 'Tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, str]' cannot be traced. Only Tensors and (possibly nested) Lists, Dicts, and Tuples of Tensors can be traced
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\jit_stanza_to_onnx.py", line 89, in aggressive_jit_convert
+    export_complex_model_jit(model, wrapper, proc_name, onnx_path, inputs, input_names)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\Desktop\stanza\jit_stanza_to_onnx.py", line 30, in export_complex_model_jit
+    traced_model = torch.jit.trace(wrapper, inputs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1000, in trace
+    traced_func = _trace_impl(
+        func,
+    ...<10 lines>...
+        _store_inputs,
+    )
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 696, in _trace_impl
+    return trace_module(
+        func,
+    ...<9 lines>...
+        _store_inputs=_store_inputs,
+    )
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1276, in trace_module
+    module._c._create_method_from_trace(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        method_name,
+        ^^^^^^^^^^^^
+    ...<6 lines>...
+        _store_inputs,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+RuntimeError: Type 'Tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, str]' cannot be traced. Only Tensors and (possibly nested) Lists, Dicts, and Tuples of Tensors can be traced
+
+INFO:stanza:Checking for updates to resources.json in case models have been updated.  Note: this behavior can be turned off with download_method=None or download_method=DownloadMethod.REUSE_RESOURCES
+INFO:stanza:Downloaded file to C:\Users\HP\AppData\Local\StanfordNLP\stanza\Cache\1.12.0\resources\resources.json
+INFO:stanza:Loading these models for language: ko (Korean):
+==============================
+| Processor | Package        |
+------------------------------
+| tokenize  | kaist          |
+| pos       | kaist_nocharlm |
+| lemma     | kaist_nocharlm |
+| depparse  | kaist_nocharlm |
+==============================
+
+INFO:stanza:Using device: cuda
+INFO:stanza:Loading: tokenize
+INFO:stanza:Loading: pos
+INFO:stanza:Loading: lemma
+INFO:stanza:Loading: depparse
+INFO:stanza:Done loading processors!
+ERROR:root:pos 실패: output with shape [1, 1600] doesn't match the broadcast shape [1, 5, 1600]
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\jit_stanza_to_onnx.py", line 85, in aggressive_jit_convert
+    export_complex_model_jit(model, wrapper, proc_name, onnx_path, inputs, input_names)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\Desktop\stanza\jit_stanza_to_onnx.py", line 30, in export_complex_model_jit
+    traced_model = torch.jit.trace(wrapper, inputs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1000, in trace
+    traced_func = _trace_impl(
+        func,
+    ...<10 lines>...
+        _store_inputs,
+    )
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 696, in _trace_impl
+    return trace_module(
+        func,
+    ...<9 lines>...
+        _store_inputs=_store_inputs,
+    )
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1276, in trace_module
+    module._c._create_method_from_trace(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        method_name,
+        ^^^^^^^^^^^^
+    ...<6 lines>...
+        _store_inputs,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\Desktop\stanza\jit_stanza_to_onnx.py", line 15, in forward
+    return self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, "dummy")
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\pos\model.py", line 176, in forward
+    char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\common\char_model.py", line 59, in forward
+    output = self.charlstm(embs, wordlens, hx=(\
+            self.charlstm_h_init.expand(self.num_dir * self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous(), \
+            self.charlstm_c_init.expand(self.num_dir * self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous()))
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\common\packed_lstm.py", line 22, in forward
+    res = self.lstm(input, hx)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\rnn.py", line 1136, in forward
+    result = _VF.lstm(
+        input,
+    ...<7 lines>...
+        self.bidirectional,
+    )
+RuntimeError: output with shape [1, 1600] doesn't match the broadcast shape [1, 5, 1600]
+
+ERROR:root:depparse 실패: too many indices for tensor of dimension 2
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\jit_stanza_to_onnx.py", line 85, in aggressive_jit_convert
+    export_complex_model_jit(model, wrapper, proc_name, onnx_path, inputs, input_names)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\Desktop\stanza\jit_stanza_to_onnx.py", line 30, in export_complex_model_jit
+    traced_model = torch.jit.trace(wrapper, inputs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1000, in trace
+    traced_func = _trace_impl(
+        func,
+    ...<10 lines>...
+        _store_inputs,
+    )
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 696, in _trace_impl
+    return trace_module(
+        func,
+    ...<9 lines>...
+        _store_inputs=_store_inputs,
+    )
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1276, in trace_module
+    module._c._create_method_from_trace(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        method_name,
+        ^^^^^^^^^^^^
+    ...<6 lines>...
+        _store_inputs,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\Desktop\stanza\jit_stanza_to_onnx.py", line 22, in forward
+    return self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, "dummy")
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\model.py", line 312, in forward
+    unlabeled_scores, deprel_scores, head_offset, lin_scores, dist_kld = self.forward_scores(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+                                                                         ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\model.py", line 276, in forward_scores
+    lstm_outputs = self.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\model.py", line 185, in embed
+    pos_emb += self.xpos_emb[i](xpos[:, :, i])
+                                ~~~~^^^^^^^^^
+IndexError: too many indices for tensor of dimension 2
+

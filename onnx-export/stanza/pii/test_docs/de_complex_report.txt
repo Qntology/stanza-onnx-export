@@ -1,0 +1,29 @@
+VERTRAULICH: PROJEKTBERICHT - ERWEITERT
+
+1. IDENTITÄT & AUSWEISE
+- Name: Hans Müller
+- Steuer-ID: 12 345 678 901
+- Reisepass: L78901234
+- Führerschein: G012345678
+
+2. KONTAKTDATEN
+- E-Mail: hans.mueller@deutsch-industrie-ag.de
+- Telefon: +49 30 12345678
+- Adresse: Potsdamer Platz 1, 10785 Berlin
+
+3. LOGISTIK & LIEFERUNG
+- Sendungsnummer: JD0123456789012345 (DHL)
+- Tor-Code: 5566#
+- Hinweis: "Lieferung bitte an Rampe 2. Der Code für das Haupttor ist 0815."
+
+4. FINANZDATEN
+- IBAN: DE12 3456 7890 1234 5678 90
+- BIC: DEUTDEBB
+- Kreditkarte: 5123 4567 8901 2345
+
+5. DIGITALE IDENTIFIKATOREN
+- Host-IP: 192.168.1.100
+- MAC-Adresse: 08:00:27:00:A6:49
+- Geräte-ID: AND-9988776655
+
+16. Juni 2026

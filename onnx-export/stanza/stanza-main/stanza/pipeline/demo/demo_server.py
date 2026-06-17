@@ -1,0 +1,69 @@
+from flask import Flask, request, abort, render_template_string
+import datetime
+import json
+import stanza
+import os
+app = Flask(__name__, static_url_path='', static_folder=os.path.abspath(os.path.dirname(__file__)))
+
+pipelineCache = dict()
+
+def get_file(path):
+    res = os.path.join(os.path.dirname(os.path.abspath(__file__)), path)
+    print(res)
+    return res
+
+@app.route('/<path:path>')
+@app.route('/static/fonts/<path:path>')
+def static_file(path):
+    if path in ['stanza-brat.css', 'stanza-brat.js', 'stanza-parseviewer.js', 'loading.gif',
+                'favicon.png', 'stanza-logo.png',
+                'Astloch-Bold.ttf', 'Liberation_Sans-Regular.ttf', 'PT_Sans-Caption-Web-Regular.ttf']:
+        return app.send_static_file(path)
+    elif path in 'index.html':
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stanza-brat.html.j2')) as f:
+            template = f.read()
+            return render_template_string(template,
+                                          version=stanza.__version__,
+                                          date=datetime.date.today().strftime('%B %Y'))
+    else:
+        abort(403)
+
+@app.route('/', methods=['GET'])
+def index():
+    return static_file('index.html')
+
+@app.route('/', methods=['POST'])
+def annotate():
+    global pipelineCache
+
+    properties = request.args.get('properties', '')
+    lang = request.args.get('pipelineLanguage', '')
+    keys = list(request.form.keys())
+    if not keys:
+        return ('No text provided', 400)
+    text = keys[0]
+
+    if lang not in pipelineCache:
+        pipelineCache[lang] = stanza.Pipeline(lang=lang, use_gpu=False)
+
+    res = pipelineCache[lang](text)
+
+    annotated_sentences = []
+    for sentence in res.sentences:
+        tokens = []
+        deps = []
+        for word in sentence.words:
+            tokens.append({'index': word.id, 'word': word.text, 'lemma': word.lemma, 'pos': word.xpos, 'upos': word.upos, 'feats': word.feats, 'ner': word.parent.ner if word.parent.ner is None or word.parent.ner == 'O' else word.parent.ner[2:]})
+            deps.append({'dep': word.deprel, 'governor': word.head, 'governorGloss': sentence.words[word.head-1].text,
+                'dependent': word.id, 'dependentGloss': word.text})
+        annotated_sentences.append({'basicDependencies': deps, 'tokens': tokens})
+        if hasattr(sentence, 'constituency') and sentence.constituency is not None:
+            annotated_sentences[-1]['parse'] = str(sentence.constituency)
+
+    return json.dumps({'sentences': annotated_sentences})
+
+def create_app():
+    return app
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=8080)

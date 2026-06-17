@@ -1,0 +1,251 @@
+{
+  "masked_text": "[ 대외비: 프로젝트 보안 보고서 *****] 1. 발신인 및 신원 정보 * 성명: ***( ************) * 주민등록번호: 82************ * 여권번호: M12345678 * 운전면허: 11*12*345678*9* * 소속: 미래전략연구소 보안1팀 2. 수신인 및 연락처 * 성명: ***( ***********) ****** ************* * ************ ******************** **** **** * 주소: ***************************** 및 현장 정보 ***********************( ******) ************** *1234# **** 요청사항: \"부재 ***** 앞에 놓아주시고, 1층 공동현관 번호는 258*입니다. \" 4 ********** **** 계좌: 국민은행 123*456789**1**12 *************************** * ***************** *********** ************ *****. * **** ********* ***B**D**63*C2*26 **** *********************** 감사합니다 ********** 16일",
+  "language_info": "Lang: ko",
+  "entities": [
+    {
+      "word": "chulsoo.kim@mirae-strategy.co.kr",
+      "type": "KO_EMAIL"
+    },
+    {
+      "word": "서울특별시 강남구 테헤란로 521 24층 3 . 물류",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "- 카드번호: 9404-1234-5678-9012",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "서울특별시 강남구 테헤란로 521 24층 3 .",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "서울특별시 강남구 테헤란로 521 24층 3",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "- 운송장번호: 1234-5678-9012",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "ID: UUID-9876-5432-10AB",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": ". kim@mirae-strategy",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "UUID-9876-5432-10AB",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "kim@mirae-strategy",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "SWIFT: KOEXKRSE 5",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "- 배송지 현관 비밀번호:",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "테헤란로 521 24층 3",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "010-1234-5678",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "Kim Chul-soo",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "- 접속 IP: 192",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "04-1234-5678",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "0315-1012345",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "이메일: chulsoo",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "Park Ji-min",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": ". 디지털 기기 정보",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": ". 2026년 6월",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": ". 금융 결제 정보",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "- MAC 주소:",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "서울특별시 강남구",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "KOEXKRSE",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "Chul-soo",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "chulsoo",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "- 연락처:",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "CJ대한통운",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "Ji-min",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "SWIFT:",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "시 경비실",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": ". 168",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "- 확장판",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "서울특별시",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": ". 15",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "- 법인",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "- 기기",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": ". 물류",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "이메일:",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": ". co",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": ". kr",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "- 배송",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "Park",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "강남구",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "ID:",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "IP:",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "박지민",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "Kim",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "MAC",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "김철수",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "배송지",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "co",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "kr",
+      "type": "KO_PROPN"
+    },
+    {
+      "word": "-",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "4",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "0",
+      "type": "KO_PHONE"
+    },
+    {
+      "word": "1",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": ".",
+      "type": "KO_ADDRESS"
+    },
+    {
+      "word": "2",
+      "type": "KO_ADDRESS"
+    }
+  ],
+  "status": "PII Tiered Processing Complete"
+}

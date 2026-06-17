@@ -1,0 +1,79 @@
+====================================================
+PII Masking Test Log
+Target File: debug_target_text.yaml
+====================================================
+
+[1] Detected Entities (Names & Organizations/Clubs):
+- 00만 유로 ( 약 263억원 ) 의 위약금을 지불한 것으로 전해졌다. (KO_PERSON)
+- 성적 반등에 실패하며 무관에 그쳤다. 엎친 데 덮친 격으로 오렐 (KO_LOCATION)
+- 무리뉴 체제로 새 판 짜기에 돌입한 레알 (KO_ORGANIZATION)
+- 1500만 유로 ( 약 263억원 ) (KO_LOCATION)
+- AFPBBNews=뉴스1 (EN_LOCATION)
+- 위닝 멘탈리티 (KO_ORGANIZATION)
+- 새로운 사령탑 (KO_ORGANIZATION)
+- 멘탈리티'도 (KO_ORGANIZATION)
+- 사진=레알 (KO_LOCATION)
+- 1500만 (KO_LOCATION)
+- 사령탑으로 (KO_LOCATION)
+- 플로렌티노 (KO_ORGANIZATION)
+- 이브라히마 (KO_PERSON)
+- 본격적으로 (KO_ORGANIZATION)
+- UEFA (EN_ORGANIZATION)
+- 공약으로 (KO_LOCATION)
+- 페데리코 (KO_ORGANIZATION)
+- 인터밀란 (KO_ORGANIZATION)
+- html (EN_ADDRESS)
+- 감독으로 (KO_ORGANIZATION)
+- 스타뉴스 (KO_ORGANIZATION)
+- 발베르데 (KO_ORGANIZATION)
+- 멘탈리티 (KO_ORGANIZATION)
+- 포르투갈 (KO_LOCATION)
+- 오렐리앙 (KO_LOCATION)
+- 벤피카를 (KO_LOCATION)
+- body (EN_LOCATION)
+- 마드리드 (KO_LOCATION)
+- 둠프리스 (KO_LOCATION)
+- UCL (EN_LOCATION)
+- 알바로 (KO_PERSON)
+- 것으로 (KO_ORGANIZATION)
+- 에서도 (KO_LOCATION)
+- 라리가 (KO_PERSON)
+- 페레스 (KO_ORGANIZATION)
+- 체제로 (KO_ORGANIZATION)
+- 코나테 (KO_PERSON)
+- 격으로 (KO_LOCATION)
+- 무리뉴 (KO_ORGANIZATION)
+- 리버풀 (KO_ORGANIZATION)
+- 알론소 (KO_PERSON)
+- div (EN_LOCATION)
+- 라커룸 (KO_LOCATION)
+- 갈무리 (KO_LOCATION)
+- SNS (EN_ORGANIZATION)
+- 사비 (KO_PERSON)
+- 감독 (KO_ORGANIZATION)
+- 거함 (KO_LOCATION)
+- 63 (EN_LOCATION)
+- 위닝 (KO_ORGANIZATION)
+- 축구 (KO_ORGANIZATION)
+- 유로 (KO_LOCATION)
+- 레알 (KO_ORGANIZATION)
+- 덴젤 (KO_LOCATION)
+
+[2] Masked Output:
+--------------------------------------------------
+****
+ ****
+ ***
+ | [ **** | 박재호 기자 ] 조세 *** **. / ***** **** 공식 *** *** '스페셜 원' 조세 *** ( ** ) **이 위기에 빠진 ** **** 의 새 **** 돌아왔다. 2013년 **을 떠난지 13년 만의 복귀다.
+ | **은 12일 ( 한국시간 ) 구단 공식 채널을 통해 *** **을 *******으로 선임했다고 발표했다. 계약 기간은 2029년 6월 30일까지 총 3년이다. *** **은 오는 7월 13일 프리시즌부터 ***** 팀을 이끈다.
+ | **은 ***를 데려오기 위해 전 소속팀 벤피카에 15***************************************
+ | 이번 파격 인사는 지난 시즌 **이 겪은 총체적 난국에서 비롯됐다. ** *** 와 *** 아르벨로아 가 연이어 팀을 맡았으나 ***********************************리앙 추아메니와 **** **** 가 충돌하는 등 *** 내 기강이 완전히 무너진 상태였다.
+ | 연임에 성공한 ***** *** 회장은 선수단을 확실하게 장악할 수 있는 강력한 카리스마가 필요하다고 판단했다. *** 회장은 선거 **** 내걸었던 ***의 선임을 발 빠르게 매듭지으며 혼란 수습에 나섰다.
+ | 조세 *** **. / ***** **** 공식 *** *** 60대에 접어든 *** **이지만 지도력은 여전하다. 올 시즌 **** **** 이끌고 리그 34경기 무패 행진 ( 23승 11무 ) 을 기록했으며, 유럽**연맹 ( **** ) 챔피언스리그 ( *** ) *** 16강에 오르는 등 경쟁력을 입증했다. 과거 2010년부터 3년간 **을 이끌며 최강 바르셀로나에 맞서 *** 우승 등을 일궈냈던 '*******'도 높은 평가를 받았다.
+ | **********************은 대대적인 선수단 개편을 예고하고 있다. 구단은 취약해진 수비진 보강을 위해 이미 ***** *** ( *** ) 와 ** **** ( **** ) 영입을 사실상 확정 지은 *** 알려졌다.
+ | 무너진 '**' **이 *** **의 지휘 아래 과거의 영광을 되찾을 수 있을지 전 세계 ** 팬들의 이목이 쏠린다.
+ | 조세 *** **. / *************
+--------------------------------------------------
+
+[3] Status: ✨ Logistic PII Detection Complete
+Language Info: Lang: ko

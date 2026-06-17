@@ -1,0 +1,299 @@
+2026-06-17 19:51:56,304 - INFO - Found 5 .pt files.
+2026-06-17 19:51:56,305 - INFO - --- Processing ./temp_stanza_models/ko\depparse\kaist_nocharlm.pt ---
+2026-06-17 19:51:58,456 - ERROR - POS fail for kaist_nocharlm.pt: 'share_hid'
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\stanza_batch_to_onnx.py", line 163, in main
+    trainer = POSTrainer(model_file=pt_path, pretrain=pretrain, foundation_cache=foundation_cache, device=device)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\pos\trainer.py", line 34, in __init__
+    self.load(model_file, pretrain, args=args, foundation_cache=foundation_cache)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\pos\trainer.py", line 178, in load
+    self.model = Tagger(self.args, self.vocab, emb_matrix=emb_matrix, share_hid=self.args['share_hid'], foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+                                                                                ~~~~~~~~~^^^^^^^^^^^^^
+KeyError: 'share_hid'
+
+2026-06-17 19:51:59,960 - ERROR - Depparse fail for kaist_nocharlm.pt: too many indices for tensor of dimension 2
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\stanza_batch_to_onnx.py", line 175, in main
+    export_depparse(trainer.model, onnx_path)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\Desktop\stanza\stanza_batch_to_onnx.py", line 114, in export_depparse
+    torch.onnx.export(
+    ~~~~~~~~~~~~~~~~~^
+        wrapper, inputs, onnx_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        operator_export_type=torch.onnx.OperatorExportTypes.ONNX_ATEN_FALLBACK
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\__init__.py", line 383, in export
+    export(
+    ~~~~~~^
+        model,
+        ^^^^^^
+    ...<15 lines>...
+        autograd_inlining=autograd_inlining,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 495, in export
+    _export(
+    ~~~~~~~^
+        model,
+        ^^^^^^
+    ...<14 lines>...
+        autograd_inlining=autograd_inlining,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 1428, in _export
+    graph, params_dict, torch_out = _model_to_graph(
+                                    ~~~~~~~~~~~~~~~^
+        model,
+        ^^^^^^
+    ...<8 lines>...
+        dynamic_axes=dynamic_axes,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 1053, in _model_to_graph
+    graph, params, torch_out, module = _create_jit_graph(model, args)
+                                       ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 937, in _create_jit_graph
+    graph, torch_out = _trace_and_get_graph_from_model(model, args)
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 844, in _trace_and_get_graph_from_model
+    trace_graph, torch_out, inputs_states = torch.jit._get_trace_graph(
+                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model,
+        ^^^^^^
+    ...<3 lines>...
+        _return_inputs_states=True,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1498, in _get_trace_graph
+    outs = ONNXTracedModule(
+        f, strict, _force_outplace, return_inputs, _return_inputs_states
+    )(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 138, in forward
+    graph, _out = torch._C._create_graph_by_tracing(
+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        wrapper,
+        ^^^^^^^^
+    ...<3 lines>...
+        self._force_outplace,
+        ^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 129, in wrapper
+    outs.append(self.inner(*trace_inputs))
+                ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\Desktop\stanza\stanza_batch_to_onnx.py", line 35, in forward
+    return self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, "dummy")
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\model.py", line 312, in forward
+    unlabeled_scores, deprel_scores, head_offset, lin_scores, dist_kld = self.forward_scores(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+                                                                         ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\model.py", line 276, in forward_scores
+    lstm_outputs = self.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\model.py", line 185, in embed
+    pos_emb += self.xpos_emb[i](xpos[:, :, i])
+                                ~~~~^^^^^^^^^
+IndexError: too many indices for tensor of dimension 2
+
+2026-06-17 19:52:00,117 - WARNING - ❌ Failed to identify or export: kaist_nocharlm.pt
+2026-06-17 19:52:00,117 - INFO - --- Processing ./temp_stanza_models/ko\lemma\kaist_nocharlm.pt ---
+2026-06-17 19:52:03,448 - ERROR - POS fail for kaist_nocharlm.pt: Cannot find class name mapping in state dict!
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\stanza_batch_to_onnx.py", line 163, in main
+    trainer = POSTrainer(model_file=pt_path, pretrain=pretrain, foundation_cache=foundation_cache, device=device)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\pos\trainer.py", line 34, in __init__
+    self.load(model_file, pretrain, args=args, foundation_cache=foundation_cache)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\pos\trainer.py", line 170, in load
+    self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\pos\vocab.py", line 72, in load_state_dict
+    assert '_key2class' in state_dict, "Cannot find class name mapping in state dict!"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Cannot find class name mapping in state dict!
+
+2026-06-17 19:52:05,107 - ERROR - Depparse fail for kaist_nocharlm.pt: Cannot find class name mapping in state dict!
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\stanza_batch_to_onnx.py", line 174, in main
+    trainer = DepparseTrainer.load(filename=pt_path, pretrain=pretrain, device=device, foundation_cache=foundation_cache)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\trainer.py", line 238, in load
+    return Trainer.load_checkpoint(filename, checkpoint, pretrain, args, foundation_cache, device, reset_history)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\trainer.py", line 256, in load_checkpoint
+    vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\pos\vocab.py", line 72, in load_state_dict
+    assert '_key2class' in state_dict, "Cannot find class name mapping in state dict!"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Cannot find class name mapping in state dict!
+
+2026-06-17 19:52:06,802 - INFO - ℹ️ Lemma model detected but export logic pending for kaist_nocharlm.pt
+2026-06-17 19:52:06,803 - INFO - --- Processing ./temp_stanza_models/ko\pos\kaist_nocharlm.pt ---
+2026-06-17 19:52:07,028 - ERROR - POS fail for kaist_nocharlm.pt: Expected `len(lengths)` to be equal to batch_size, but got 8 (batch_size=1)
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\stanza_batch_to_onnx.py", line 164, in main
+    export_pos(trainer.model, onnx_path)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\Desktop\stanza\stanza_batch_to_onnx.py", line 85, in export_pos
+    torch.onnx.export(
+    ~~~~~~~~~~~~~~~~~^
+        wrapper, inputs, onnx_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        operator_export_type=torch.onnx.OperatorExportTypes.ONNX_ATEN_FALLBACK
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\__init__.py", line 383, in export
+    export(
+    ~~~~~~^
+        model,
+        ^^^^^^
+    ...<15 lines>...
+        autograd_inlining=autograd_inlining,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 495, in export
+    _export(
+    ~~~~~~~^
+        model,
+        ^^^^^^
+    ...<14 lines>...
+        autograd_inlining=autograd_inlining,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 1428, in _export
+    graph, params_dict, torch_out = _model_to_graph(
+                                    ~~~~~~~~~~~~~~~^
+        model,
+        ^^^^^^
+    ...<8 lines>...
+        dynamic_axes=dynamic_axes,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 1053, in _model_to_graph
+    graph, params, torch_out, module = _create_jit_graph(model, args)
+                                       ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 937, in _create_jit_graph
+    graph, torch_out = _trace_and_get_graph_from_model(model, args)
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 844, in _trace_and_get_graph_from_model
+    trace_graph, torch_out, inputs_states = torch.jit._get_trace_graph(
+                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model,
+        ^^^^^^
+    ...<3 lines>...
+        _return_inputs_states=True,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1498, in _get_trace_graph
+    outs = ONNXTracedModule(
+        f, strict, _force_outplace, return_inputs, _return_inputs_states
+    )(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 138, in forward
+    graph, _out = torch._C._create_graph_by_tracing(
+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        wrapper,
+        ^^^^^^^^
+    ...<3 lines>...
+        self._force_outplace,
+        ^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 129, in wrapper
+    outs.append(self.inner(*trace_inputs))
+                ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\Desktop\stanza\stanza_batch_to_onnx.py", line 27, in forward
+    return self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, "dummy")
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\pos\model.py", line 176, in forward
+    char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\common\char_model.py", line 58, in forward
+    embs = pack_padded_sequence(embs, wordlens, batch_first=True)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\utils\rnn.py", line 341, in pack_padded_sequence
+    data, batch_sizes = _VF._pack_padded_sequence(input, lengths, batch_first)
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Expected `len(lengths)` to be equal to batch_size, but got 8 (batch_size=1)
+
+2026-06-17 19:52:07,110 - ERROR - Depparse fail for kaist_nocharlm.pt: 'lemma'
+Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\stanza_batch_to_onnx.py", line 174, in main
+    trainer = DepparseTrainer.load(filename=pt_path, pretrain=pretrain, device=device, foundation_cache=foundation_cache)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\trainer.py", line 238, in load
+    return Trainer.load_checkpoint(filename, checkpoint, pretrain, args, foundation_cache, device, reset_history)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\trainer.py", line 313, in load_checkpoint
+    model = GraphTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\trainer.py", line 346, in build_model
+    return GraphParser(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\model.py", line 242, in __init__
+    super().__init__(args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\depparse\model.py", line 81, in __init__
+    self.lemma_emb = nn.Embedding(len(vocab['lemma']), self.args['word_emb_dim'], padding_idx=0)
+                                      ~~~~~^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\common\vocab.py", line 262, in __getitem__
+    return self._vocabs[key]
+           ~~~~~~~~~~~~^^^^^
+KeyError: 'lemma'
+
+2026-06-17 19:52:07,192 - WARNING - ❌ Failed to identify or export: kaist_nocharlm.pt
+2026-06-17 19:52:07,193 - INFO - --- Processing ./temp_stanza_models/ko\tokenize\kaist.pt ---
+2026-06-17 19:52:07,397 - INFO - ✅ Success: Tokenizer kaist.pt
+2026-06-17 19:52:07,398 - INFO - Batch conversion finished.

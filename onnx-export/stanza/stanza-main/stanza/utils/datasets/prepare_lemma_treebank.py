@@ -1,0 +1,84 @@
+"""
+A script to prepare all lemma datasets.
+
+For example, do
+  python -m stanza.utils.datasets.prepare_lemma_treebank TREEBANK
+such as
+  python -m stanza.utils.datasets.prepare_lemma_treebank UD_English-EWT
+
+and it will prepare each of train, dev, test
+"""
+
+from stanza.models.common.constant import treebank_to_short_name
+
+import stanza.utils.datasets.common as common
+import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
+
+import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
+
+from stanza.utils.datasets.dataset_retagging import Tags, add_retagging_args, build_retagger
+
+def add_specific_args(parser) -> None:
+    parser.add_argument('--no_lemma_classifier', dest='lemma_classifier', action='store_false', default=True,
+                        help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer")
+    add_retagging_args(parser)
+
+def check_lemmas(train_file):
+    """
+    Check if a treebank has any lemmas in it
+
+    For example, in Vietnamese-VTB, all the words and lemmas are exactly the same
+    in Telugu-MTG, all the lemmas are blank
+    """
+    # could eliminate a few languages immediately based on UD 2.7
+    # but what if a later dataset includes lemmas?
+    #if short_language in ('vi', 'fro', 'th'):
+    #    return False
+    with open(train_file, encoding="utf-8") as fin:
+        for line in fin:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            pieces = line.split("\t")
+            word = pieces[1].lower().strip()
+            lemma = pieces[2].lower().strip()
+            if not lemma or lemma == '_' or lemma == '-':
+                continue
+            if word == lemma:
+                continue
+            return True
+    return False
+
+def process_treebank(treebank, model_type, paths, args):
+    if treebank.startswith("UD_"):
+        udbase_dir = paths["UDBASE"]
+        input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
+        if not input_conllu:
+            input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
+        augment = check_lemmas(input_conllu)
+        if not augment:
+            print("No lemma information found in %s.  Not augmenting the dataset" % train_conllu)
+    else:
+        # TODO: check the data to see if there are lemmas or not
+        augment = True
+
+    if args.tag_method is Tags.GOLD:
+        prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args, augment=augment)
+    elif args.tag_method is Tags.PREDICTED:
+        retag_dataset = build_retagger(treebank, paths, args)
+        prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args=args, augment=augment, postprocess=retag_dataset)
+    else:
+        raise ValueError("Unknown tags method: {}".format(args.tag_method))
+
+    short_name = treebank_to_short_name(treebank)
+    if args.lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING:
+        prepare_lemma_classifier.main(short_name)
+    return True
+
+def main():
+    common.main(process_treebank, common.ModelType.LEMMA, add_specific_args)
+
+if __name__ == '__main__':
+    main()
+
+

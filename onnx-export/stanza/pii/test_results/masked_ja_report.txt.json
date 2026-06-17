@@ -1,0 +1,75 @@
+{
+  "masked_text": "チームの皆様、 **でのプロジェクトに関する正式な報告書です。主な連絡担当者は****様******* * ****@company * jp）です。現在の住所は**都港区芝公園4-2-*です。 このプロジェクトには、**都知事や地元のコミュニティリーダーなど、複数の関係者が関わっています。また、*****氏（電話：************）が率いるセキュリティチームとも調整が必要です。 すべての書類は以下の住所に送付してください： **支社 〒105-0011 **都港区芝公園4-2-* ** よろしくお願いします、 **** マネージャー",
+  "language_info": "Lang: ja",
+  "entities": [
+    {
+      "word": "tanaka.taro@company.jp",
+      "type": "JA_EMAIL"
+    },
+    {
+      "word": "03-1234-5678",
+      "type": "JA_PHONE"
+    },
+    {
+      "word": "（tanaka",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "taro",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "5678",
+      "type": "JA_PHONE"
+    },
+    {
+      "word": "健次郎",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "日本",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "一郎",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "東京",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "田中",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "鈴木",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "佐藤",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "太郎",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "芝",
+      "type": "JA_PROPN"
+    },
+    {
+      "word": "8",
+      "type": "JA_PHONE"
+    },
+    {
+      "word": ".",
+      "type": "JA_EMAIL"
+    },
+    {
+      "word": "港",
+      "type": "JA_PROPN"
+    }
+  ],
+  "status": "PII Tiered Processing Complete"
+}

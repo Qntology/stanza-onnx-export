@@ -1,0 +1,167 @@
+{
+  "masked_text": "Dear Team, This is a formal report regard**g the up*****g project ** ****** * Our primary contact person is ** * *************, who can be reached ** ******** * **************** * *** * He currently resides ****** ***************, ******, ** * The project **volves several stakeholders, **clud**g the ***** of ****** and local ***munity leaders * We also need ** coord****e with the security firm headed by *************( Phone: ****************) * Please ensure all documents are sent ** the official address: ***************** *** *************** ******, ********************** Best regards *************** Manager",
+  "language_info": "Lang: en",
+  "entities": [
+    {
+      "word": "jonathan.wick@continental.com",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "Continental Hotel",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "PG United Kingdom",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "wick@continental",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "+44 20 7946 0958",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": ", Winston Scott",
+      "type": "EN_ADDRESS"
+    },
+    {
+      "word": "Continental Way",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "United Kingdom",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Winston Scott",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Marcus Wright",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Jonathan Wick",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Continental",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Hotel 100",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Jonathan",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "jonathan",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Kingdom",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Winston",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Wright",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Marcus",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "London",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "at 100",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Mayor",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "SE1 9",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Scott",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Hotel",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Way ,",
+      "type": "EN_ADDRESS"
+    },
+    {
+      "word": "Wick",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "100",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "SE1",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Way",
+      "type": "EN_ADDRESS"
+    },
+    {
+      "word": "com",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "PG",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "in",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Mr",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "UK",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "at",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "to",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": ".",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": ",",
+      "type": "EN_ADDRESS"
+    },
+    {
+      "word": "a",
+      "type": "EN_ADDRESS"
+    }
+  ],
+  "status": "PII Tiered Processing Complete"
+}

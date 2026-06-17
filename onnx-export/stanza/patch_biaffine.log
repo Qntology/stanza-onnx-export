@@ -1,0 +1,150 @@
+INFO:stanza:Checking for updates to resources.json in case models have been updated.  Note: this behavior can be turned off with download_method=None or download_method=DownloadMethod.REUSE_RESOURCES
+INFO:stanza:Downloaded file to C:\Users\HP\AppData\Local\StanfordNLP\stanza\Cache\1.12.0\resources\resources.json
+INFO:stanza:Loading these models for language: ko (Korean):
+==============================
+| Processor | Package        |
+------------------------------
+| tokenize  | kaist          |
+| pos       | kaist_nocharlm |
+==============================
+
+INFO:stanza:Using device: cuda
+INFO:stanza:Loading: tokenize
+INFO:stanza:Loading: pos
+INFO:stanza:Done loading processors!
+ERROR:root:Traceback (most recent call last):
+  File "C:\Users\HP\Desktop\stanza\patch_biaffine_to_onnx.py", line 81, in run_patch_convert
+    export_pos(processor.trainer.model, onnx_path)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\Desktop\stanza\patch_biaffine_to_onnx.py", line 63, in export_pos
+    torch.onnx.export(
+    ~~~~~~~~~~~~~~~~~^
+        wrapper, inputs, onnx_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        operator_export_type=torch.onnx.OperatorExportTypes.ONNX_ATEN_FALLBACK
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\__init__.py", line 383, in export
+    export(
+    ~~~~~~^
+        model,
+        ^^^^^^
+    ...<15 lines>...
+        autograd_inlining=autograd_inlining,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 495, in export
+    _export(
+    ~~~~~~~^
+        model,
+        ^^^^^^
+    ...<14 lines>...
+        autograd_inlining=autograd_inlining,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 1428, in _export
+    graph, params_dict, torch_out = _model_to_graph(
+                                    ~~~~~~~~~~~~~~~^
+        model,
+        ^^^^^^
+    ...<8 lines>...
+        dynamic_axes=dynamic_axes,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 1053, in _model_to_graph
+    graph, params, torch_out, module = _create_jit_graph(model, args)
+                                       ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 937, in _create_jit_graph
+    graph, torch_out = _trace_and_get_graph_from_model(model, args)
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\onnx\utils.py", line 844, in _trace_and_get_graph_from_model
+    trace_graph, torch_out, inputs_states = torch.jit._get_trace_graph(
+                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model,
+        ^^^^^^
+    ...<3 lines>...
+        _return_inputs_states=True,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 1498, in _get_trace_graph
+    outs = ONNXTracedModule(
+        f, strict, _force_outplace, return_inputs, _return_inputs_states
+    )(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 138, in forward
+    graph, _out = torch._C._create_graph_by_tracing(
+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        wrapper,
+        ^^^^^^^^
+    ...<3 lines>...
+        self._force_outplace,
+        ^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\jit\_trace.py", line 129, in wrapper
+    outs.append(self.inner(*trace_inputs))
+                ~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\Desktop\stanza\patch_biaffine_to_onnx.py", line 39, in forward
+    return self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, "dummy")
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\pos\model.py", line 176, in forward
+    char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\common\char_model.py", line 59, in forward
+    output = self.charlstm(embs, wordlens, hx=(\
+            self.charlstm_h_init.expand(self.num_dir * self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous(), \
+            self.charlstm_c_init.expand(self.num_dir * self.args['char_num_layers'], batch_size, self.args['char_hidden_dim']).contiguous()))
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\stanza\models\common\packed_lstm.py", line 22, in forward
+    res = self.lstm(input, hx)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\module.py", line 1729, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\HP\miniconda3\Lib\site-packages\torch\nn\modules\rnn.py", line 1136, in forward
+    result = _VF.lstm(
+        input,
+    ...<7 lines>...
+        self.bidirectional,
+    )
+RuntimeError: output with shape [1, 1600] doesn't match the broadcast shape [1, 5, 1600]
+

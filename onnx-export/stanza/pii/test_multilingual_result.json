@@ -1,0 +1,222 @@
+[
+  {
+    "name": "Korean",
+    "input": "서울특별시 서초구 반포대로 23길 45 (삼성동) 우편번호 06655",
+    "masked": "서울특별시 *** **** 23길 45 (***) 우편번호 06655",
+    "entities": [
+      [
+        "06655",
+        "AGE"
+      ],
+      [
+        "반포대로",
+        "ADDRESS"
+      ],
+      [
+        "삼성동",
+        "FIRSTNAME"
+      ],
+      [
+        "서초구",
+        "ADDRESS"
+      ],
+      [
+        "45",
+        "AGE"
+      ]
+    ]
+  },
+  {
+    "name": "English (US)",
+    "input": "My office is at 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA.",
+    "masked": "My office is at 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA.",
+    "entities": [
+      [
+        "94043",
+        "AGE"
+      ],
+      [
+        "1600",
+        "AGE"
+      ],
+      [
+        "USA",
+        "FIRSTNAME"
+      ],
+      [
+        "CA",
+        "FIRSTNAME"
+      ]
+    ]
+  },
+  {
+    "name": "German",
+    "input": "Bitte senden Sie es an Hauptstraße 10, 10115 Berlin, Germany.",
+    "masked": "Bitte senden Sie es an Hauptstraße 10, 10115 Berlin, Germany.",
+    "entities": [
+      [
+        "Hauptstraße",
+        "FIRSTNAME"
+      ],
+      [
+        "Germany",
+        "FIRSTNAME"
+      ],
+      [
+        "senden",
+        "FIRSTNAME"
+      ],
+      [
+        "10115",
+        "AGE"
+      ],
+      [
+        "Bitte",
+        "FIRSTNAME"
+      ],
+      [
+        "Sie",
+        "FIRSTNAME"
+      ],
+      [
+        "10",
+        "AGE"
+      ]
+    ]
+  },
+  {
+    "name": "French",
+    "input": "L'adresse est 12 Rue de la Paix, 75002 Paris, France.",
+    "masked": "L'adresse est 12 Rue de la Paix, 75002 Paris, France.",
+    "entities": [
+      [
+        "L'adresse",
+        "FIRSTNAME"
+      ],
+      [
+        "France",
+        "FIRSTNAME"
+      ],
+      [
+        "75002",
+        "AGE"
+      ],
+      [
+        "Paris",
+        "ORGANIZATION"
+      ],
+      [
+        "Paix",
+        "FIRSTNAME"
+      ],
+      [
+        "est",
+        "FIRSTNAME"
+      ],
+      [
+        "Rue",
+        "FIRSTNAME"
+      ],
+      [
+        "12",
+        "AGE"
+      ]
+    ]
+  },
+  {
+    "name": "Spanish",
+    "input": "Vivo en Calle de Alcalá 12, 28014 Madrid, España.",
+    "masked": "Vivo en Calle de Alcalá 12, 28014 Madrid, España.",
+    "entities": [
+      [
+        "Madrid",
+        "FIRSTNAME"
+      ],
+      [
+        "28014",
+        "AGE"
+      ],
+      [
+        "Calle",
+        "FIRSTNAME"
+      ],
+      [
+        "12",
+        "AGE"
+      ]
+    ]
+  },
+  {
+    "name": "Japanese",
+    "input": "住所は東京都港区北青山1-2-3입니다.",
+    "masked": "住所は東京都港区北青山1-2-3입니다.",
+    "entities": []
+  },
+  {
+    "name": "Chinese",
+    "input": "中国上海市黄浦区南京路123号",
+    "masked": "中国上海市黄浦区南京路123号",
+    "entities": []
+  },
+  {
+    "name": "Italian",
+    "input": "Via Roma 15, 00184 Roma RM, Italy.",
+    "masked": "Via Roma 15, 00184 Roma RM, Italy.",
+    "entities": [
+      [
+        "00184",
+        "AGE"
+      ],
+      [
+        "Roma",
+        "FIRSTNAME"
+      ],
+      [
+        "Via",
+        "FIRSTNAME"
+      ],
+      [
+        "15",
+        "AGE"
+      ]
+    ]
+  },
+  {
+    "name": "Dutch",
+    "input": "Morsstraat 111, 2312 BK Leiden, Netherlands.",
+    "masked": "Morsstraat 111, 2312 BK Leiden, Netherlands.",
+    "entities": [
+      [
+        "2312",
+        "AGE"
+      ],
+      [
+        "111",
+        "AGE"
+      ]
+    ]
+  },
+  {
+    "name": "Portuguese",
+    "input": "Rua da Liberdade 123, 1000-001 Lisboa, Portugal.",
+    "masked": "Rua da Liberdade 123, 1000-001 Lisboa, Portugal.",
+    "entities": [
+      [
+        "Liberdade",
+        "FIRSTNAME"
+      ],
+      [
+        "001",
+        "AGE"
+      ],
+      [
+        "123",
+        "AGE"
+      ],
+      [
+        "da",
+        "FIRSTNAME"
+      ]
+    ]
+  }
+]

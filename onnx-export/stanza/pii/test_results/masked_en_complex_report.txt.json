@@ -1,0 +1,279 @@
+{
+  "masked_text": "CONFIDENTIAL: ********************* AGREEMENT * EXTENDED *. IDENTITY & GOVERNMENT IDS * Name: ******************* * SSN: 666*00**234 * Passport No: ********* * Driver's License: B*234567 2 ********* DETAILS * Email: r. *************************. *** * Phone: *************** * Address: *************************, *************, ********, *****. LOGISTICS & DELIVERY ********** Number: *Z999AA**********4( UPS) ****** Code: #**** ********** Note: \"Please leave ** ******** door. The security code for ******** entrance ** ****. \" 4. FINANCIAL DATA ****** Account: **********( ***************) * IBAN: US*2 CHASE ***************** ******** Card: ***************7890 * *****/ BIC: CHASEUS33 5. DIGITAL IDENTIFIERS * Server IP: ***. **. ***. * ***** Address: 00:0a:95:9d:68:** ******** Identifier: ******************** Sincerely, **************",
+  "language_info": "Lang: en",
+  "entities": [
+    {
+      "word": "r.harrison@global-tech-corp.com",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "1600 Amphitheatre Parkway",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "STRATEGIC PARTNERSHIP",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "IMEI-355224050123456",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "harrison@global-tech",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "Robert J . Harrison",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "1600 Amphitheatre",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "0000 9876 5432 10",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "JP Morgan Chase",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "+1-202-555-0178",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "0000 9876 5432",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "4532-7812-3456",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "June 16 , 2026",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Mountain View",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Amphitheatre",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "- Delivery",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": ", Mountain",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "3552240501",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "9876543210",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "- Tracking",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "1012345678",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": ". CONTACT",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Parkway ,",
+      "type": "EN_ADDRESS"
+    },
+    {
+      "word": "STRATEGIC",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "123456789",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "Harrison",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Robert J",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "- Device",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "the side",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "the back",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Mountain",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "CA 94043",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "- Credit",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "Parkway",
+      "type": "EN_ADDRESS"
+    },
+    {
+      "word": "- Gate",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "Morgan",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Robert",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "- Bank",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "USA 3",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "SWIFT",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "94043",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "Chase",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "- MAC",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "7788",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "View",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "corp",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "2026",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "June",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "1992",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "254",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "MAC",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "172",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "com",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "USA",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "CA",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "is",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "16",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "at",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "JP",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "J",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "1",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "4",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "r",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": ".",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": ",",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "5",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "2",
+      "type": "EN_PROPN"
+    },
+    {
+      "word": "-",
+      "type": "EN_EMAIL"
+    }
+  ],
+  "status": "PII Tiered Processing Complete"
+}

@@ -1,0 +1,143 @@
+{
+  "masked_text": "Estimado equipo, Le pr****to ** informe sobre la expansión ** ****** * Nu**tra persona ** contacto ** la *** * ************, cuyo correo **ectrónico ** ***** * ************** * ** * Su dirección actual ** ******** *******, **, 28001 ******, ****** * El proyecto requiere la aprobación ** varios **partam**tos municipal** * También **bemos contactar con ** arquitecto principal, ***********( ********: +34 ***********) * Toda la corr**pon**ncia **be dirigirse a: ******** ********* ******** *******, ** 28001 ************* ***********, ******************** *******",
+  "language_info": "Lang: es",
+  "entities": [
+    {
+      "word": "maria.garcia@empresa.es",
+      "type": "ES_EMAIL"
+    },
+    {
+      "word": "Juan Carlos Director",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "garcia@empresa",
+      "type": "ES_EMAIL"
+    },
+    {
+      "word": "Madrid España",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Maria Garcia",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "912 345 678",
+      "type": "ES_PHONE"
+    },
+    {
+      "word": "Carlos Ruiz",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Atentamente",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Centrales",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Director",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Teléfono",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Oficinas",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Calle de",
+      "type": "ES_ADDRESS"
+    },
+    {
+      "word": "345 678",
+      "type": "ES_PHONE"
+    },
+    {
+      "word": "General",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Serrano",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Madrid",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Carlos",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Garcia",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "España",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Maria",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "maria",
+      "type": "ES_EMAIL"
+    },
+    {
+      "word": "Calle",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Ruiz",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Juan",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "Sra",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "912",
+      "type": "ES_PHONE"
+    },
+    {
+      "word": "45",
+      "type": "ES_PHONE"
+    },
+    {
+      "word": "de",
+      "type": "ES_ADDRESS"
+    },
+    {
+      "word": "el",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "en",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "es",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": "a",
+      "type": "ES_PROPN"
+    },
+    {
+      "word": ".",
+      "type": "ES_EMAIL"
+    }
+  ],
+  "status": "PII Tiered Processing Complete"
+}

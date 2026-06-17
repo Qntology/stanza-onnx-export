@@ -1,0 +1,19 @@
+2026-06-17 19:56:31,318 - INFO - Found 5 .pt files.
+2026-06-17 19:56:31,318 - INFO - --- Processing ./temp_stanza_models/ko\depparse\kaist_nocharlm.pt ---
+2026-06-17 19:56:31,449 - ERROR - POS fail for kaist_nocharlm.pt: 'NoneType' object is not subscriptable
+2026-06-17 19:56:34,937 - ERROR - Depparse fail for kaist_nocharlm.pt: The size of tensor a (8) must match the size of tensor b (9) at non-singleton dimension 2
+2026-06-17 19:56:35,089 - WARNING - ❌ Failed to identify or export: kaist_nocharlm.pt
+2026-06-17 19:56:35,090 - INFO - --- Processing ./temp_stanza_models/ko\lemma\kaist_nocharlm.pt ---
+2026-06-17 19:56:36,764 - ERROR - POS fail for kaist_nocharlm.pt: 'NoneType' object is not subscriptable
+2026-06-17 19:56:38,406 - INFO - Patching legacy MultiVocab state_dict...
+2026-06-17 19:56:38,407 - ERROR - Depparse fail for kaist_nocharlm.pt: 'char'
+2026-06-17 19:56:40,078 - INFO - ℹ️ Lemma model detected but export logic pending for kaist_nocharlm.pt
+2026-06-17 19:56:40,079 - INFO - --- Processing ./temp_stanza_models/ko\pos\kaist_nocharlm.pt ---
+2026-06-17 19:56:40,186 - ERROR - POS fail for kaist_nocharlm.pt: 'NoneType' object is not subscriptable
+2026-06-17 19:56:40,263 - ERROR - Depparse fail for kaist_nocharlm.pt: 'lemma'
+2026-06-17 19:56:40,333 - WARNING - ❌ Failed to identify or export: kaist_nocharlm.pt
+2026-06-17 19:56:40,333 - INFO - --- Processing ./temp_stanza_models/ko\tokenize\kaist.pt ---
+2026-06-17 19:56:40,354 - ERROR - POS fail for kaist.pt: 'NoneType' object is not subscriptable
+2026-06-17 19:56:40,374 - INFO - Patching legacy MultiVocab state_dict...
+2026-06-17 19:56:40,375 - ERROR - Depparse fail for kaist.pt: 'lang'
+2026-06-17 19:56:40,395 - WARNING - ❌ Failed to identify or export: kaist.pt
