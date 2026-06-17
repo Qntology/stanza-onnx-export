@@ -1,0 +1,15 @@
+[package]
+name = "stanza_onnx_test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# ONNX Runtime Rust bindings
+ort = { version = "2.0.0-rc.9", features = ["ndarray"] }
+ndarray = "0.17.2"
+# 문자열 처리를 위한 유틸리티 (필요 시)
+unicode-segmentation = "1.10.1"
+
+[[bin]]
+name = "stanza_onnx_test"
+path = "src/main.rs"
