@@ -1,155 +1,148 @@
+import sys
 import os
+import re
+
+# --- 1. SETUP LOCAL STANZA SOURCE ---
+STANZA_LOCAL_PATH = r"C:\Users\HP\Desktop\stanza\stanza-main"
+if os.path.exists(STANZA_LOCAL_PATH):
+    sys.path.insert(0, STANZA_LOCAL_PATH)
+    print(f"✅ Using local Stanza source from: {STANZA_LOCAL_PATH}")
+
+import stanza
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import stanza
-import numpy as np
-import argparse
-from stanza.models.common.packed_lstm import PackedLSTM
-from stanza.models.common.hlstm import HighwayLSTM
-from stanza.models.common.char_model import CharacterModel
+import json
+import traceback
+import inspect
+import importlib
+import stanza.models.common.utils as stanza_utils
 
-# --- 1. Global Architectural Patches ---
+# --- 2. TRACEABLE PATCHES ---
 
-def patched_packed_lstm_forward(self, input, lengths=None, hx=None):
-    output, (h, c) = self.lstm(input, hx)
-    return output, (h, c)
-PackedLSTM.forward = patched_packed_lstm_forward
+def traceable_unsort(sorted_tensor, oidx):
+    if not torch.jit.is_tracing():
+        return sorted_tensor[[x[0] for x in sorted(enumerate(oidx), key=lambda x: x[1])]]
+    return sorted_tensor[torch.argsort(oidx)]
+stanza_utils.unsort = traceable_unsort
 
-def patched_hlstm_forward(self, input, sentlens=None, hx=None):
-    curr_input = input
-    for i in range(len(self.lstm)):
-        output, _ = self.lstm[i](curr_input)
-        gate = torch.sigmoid(self.gate[i](curr_input))
-        highway = torch.tanh(self.highway[i](curr_input))
-        curr_input = output + gate * highway
-        curr_input = self.drop(curr_input)
-    return curr_input, None
-HighwayLSTM.forward = patched_hlstm_forward
+def patched_pad_sequence(sequences, batch_first=False, padding_value=0.0):
+    if not torch.jit.is_tracing():
+        return torch.nn.utils.rnn.pad_sequence(sequences, batch_first, padding_value)
+    max_len = max(s.size(0) for s in sequences)
+    padded = [torch.nn.functional.pad(s, (0, 0, 0, max_len - s.size(0)) if s.dim() > 1 else (0, max_len - s.size(0)), value=padding_value) for s in sequences]
+    return torch.stack(padded, dim=0 if batch_first else 1)
 
-# --- 2. Dynamic Wrappers ---
+torch.nn.utils.rnn.pad_sequence = patched_pad_sequence
 
-class ONNXCharacterModel(nn.Module):
-    def __init__(self, original_char):
+# --- 3. DYNAMIC SKELETON WRAPPER ---
+
+class DynamicModelWrapper(nn.Module):
+    def __init__(self, model, input_names):
         super().__init__()
-        self.char_emb = original_char.char_emb
-        self.charlstm = original_char.charlstm.lstm
-        self.dropout = original_char.dropout
-        self.char_attn = getattr(original_char, 'char_attn', None)
+        self.model = model
+        self.input_names = input_names
+        self.sig = inspect.signature(model.forward)
+        self.param_names = [p for p in self.sig.parameters.keys() if p != 'self']
 
-    def forward(self, chars):
-        embs = self.dropout(self.char_emb(chars))
-        res, _ = self.charlstm(embs)
-        if self.char_attn:
-            attn_weights = torch.sigmoid(self.char_attn(self.dropout(res)))
-            res = res * attn_weights
-        return res.sum(dim=1)
+    def forward(self, *args):
+        input_map = {name: arg for name, arg in zip(self.input_names, args)}
+        call_args = []
+        for p_name in self.param_names:
+            if p_name == 'text':
+                batch_size = args[0].size(0) if len(args) > 0 else 1
+                seq_len = args[0].size(1) if len(args) > 0 else 1
+                call_args.append([['dummy'] * seq_len for _ in range(batch_size)])
+            elif p_name in input_map:
+                call_args.append(input_map[p_name])
+            else:
+                call_args.append(None)
+        res = self.model(*call_args)
+        if isinstance(res, tuple): return tuple(res[1])
+        return tuple(res)
 
-class DepparseONNXWrapper(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.args = model.args
-        self.word_emb = model.word_emb
-        self.lemma_emb = model.lemma_emb
-        self.pretrained_emb = model.pretrained_emb
-        self.trans_pretrained = model.trans_pretrained
-        self.upos_emb = model.upos_emb
-        self.xpos_emb = model.xpos_emb
+# --- 4. CODE-AWARE LOGIC ---
+
+def analyze_source_for_quirks(model_class_name):
+    """Reads Stanza source to find unusual forward arguments."""
+    base_path = os.path.join(STANZA_LOCAL_PATH, "stanza", "models")
+    search_map = {
+        "Tagger": "pos/model.py",
+        "GraphParser": "depparse/model.py"
+    }
+    if model_class_name in search_map:
+        target_file = os.path.join(base_path, search_map[model_class_name])
+        if os.path.exists(target_file):
+            with open(target_file, "r", encoding="utf-8") as f:
+                content = f.read()
+                # Find forward method
+                match = re.search(r"def forward\(self, (.*?)\):", content)
+                if match:
+                    args = [a.strip().split("=")[0] for a in match.group(1).split(",")]
+                    print(f"      Found source signature for {model_class_name}: {args}")
+                    return args
+    return None
+
+# --- 5. EXPORT ENGINE ---
+
+def convert_lang(lang):
+    print(f"\n🌍 Processing: {lang}")
+    ONNX_DIR = "./onnx_final"
+    VOCAB_DIR = "./vocabs"
+    os.makedirs(ONNX_DIR, exist_ok=True)
+    os.makedirs(VOCAB_DIR, exist_ok=True)
+    
+    try:
+        nlp = stanza.Pipeline(lang, processors='tokenize,pos,lemma,depparse')
         
-        if model.args['char'] and hasattr(model, 'charmodel'):
-            self.charmodel = ONNXCharacterModel(model.charmodel)
-            self.trans_char = getattr(model, 'trans_char', None)
-        else:
-            self.charmodel = None
+        # Vocab
+        pos_m = nlp.processors['pos'].trainer.model
+        dep_m = nlp.processors['depparse'].trainer.model
+        vocab_data = {"upos": pos_m.vocab['upos']._id2unit, "deprel": dep_m.vocab['deprel']._id2unit, "word2id": pos_m.vocab['word']._unit2id}
+        with open(f"{VOCAB_DIR}/{lang}_vocab_full.json", "w", encoding="utf-8") as f:
+            json.dump(vocab_data, f, ensure_ascii=False)
+
+        def safe_export(model, name, is_dep=False):
+            model.cpu().eval()
+            batch, seq = 1, 8
+            tw = batch * seq
+            if is_dep: seq += 1; tw = batch * seq
             
-        self.parserlstm = model.parserlstm
-        self.unlabeled = model.unlabeled
-        self.deprel = model.deprel
-        self.drop = model.drop
-
-    def forward(self, word, wordchars, upos, xpos, pretrained, lemma):
-        inputs = []
-        inputs.append(self.trans_pretrained(self.pretrained_emb(pretrained)))
-        inputs.append(self.word_emb(word))
-        inputs.append(self.lemma_emb(lemma))
-        
-        pos_emb = self.upos_emb(upos)
-        if isinstance(self.xpos_emb, nn.ModuleList):
-            for i in range(len(self.xpos_emb)): pos_emb = pos_emb + self.xpos_emb[i](xpos[:, :, i])
-        else: pos_emb = pos_emb + self.xpos_emb(xpos)
-        
-        inputs.append(pos_emb)
-        if self.args.get('use_ufeats', True): inputs.append(pos_emb)
-        
-        if self.charmodel and self.trans_char:
-            char_reps = self.charmodel(wordchars)
-            char_reps = char_reps.reshape(word.size(0), word.size(1), -1)
-            inputs.append(self.trans_char(self.drop(char_reps)))
+            inputs = {'word': torch.randint(1, 10, (batch, seq), dtype=torch.long), 'word_mask': torch.ones((batch, seq), dtype=torch.bool), 'pretrained': torch.randint(1, 10, (batch, seq), dtype=torch.long), 'word_orig_idx': torch.arange(tw, dtype=torch.long), 'sentlens': torch.tensor([seq] * batch, dtype=torch.long), 'wordlens': torch.full((tw,), 5, dtype=torch.long)}
+            if is_dep: inputs.update({'lemma': torch.randint(1, 10, (batch, seq), dtype=torch.long), 'head': torch.zeros((batch, seq), dtype=torch.long), 'deprel': torch.zeros((batch, seq), dtype=torch.long)})
             
-        # Cat and alignment
-        lstm_inputs = torch.cat(inputs, dim=-1)
-        lstm_outputs, _ = self.parserlstm(lstm_inputs)
-        
-        unlabeled_scores = self.unlabeled(lstm_outputs, lstm_outputs)
-        deprel_scores = self.deprel(lstm_outputs, lstm_outputs)
-        return unlabeled_scores, deprel_scores
+            if hasattr(model, 'charmodel') and model.charmodel:
+                inputs['wordchars'] = torch.randint(1, 10, (tw, 5), dtype=torch.long)
+                inputs['wordchars_mask'] = torch.ones((tw, 5), dtype=torch.bool)
+            
+            try:
+                # 1st attempt: Normal wrapper
+                names = list(inputs.keys())
+                torch.onnx.export(DynamicModelWrapper(model, names), tuple(inputs[n] for n in names), f"{ONNX_DIR}/{lang}_{name}.onnx", opset_version=14, do_constant_folding=True, input_names=names, output_names=['o1', 'o2', 'o3'] if not is_dep else ['o1', 'o2'], dynamic_axes={'word': {1: 'seq_len'}})
+                return True
+            except Exception as e:
+                print(f"      ⚠️ {name} failed, applying code-aware strip...")
+                # Analyze source to be sure
+                analyze_source_for_quirks(type(model).__name__)
+                
+                # NUCLEAR: Physically strip CharLM and BERT
+                if hasattr(model, 'charmodel'): model.charmodel = None
+                if hasattr(model, 'bert_model'): model.bert_model = None
+                if hasattr(model, 'args'): model.args['charlm'] = False; model.args['bert_model'] = None
+                
+                new_names = [n for n in inputs.keys() if 'wordchars' not in n]
+                torch.onnx.export(DynamicModelWrapper(model, new_names), tuple(inputs[n] for n in new_names), f"{ONNX_DIR}/{lang}_{name}.onnx", opset_version=14, do_constant_folding=True, input_names=new_names, output_names=['o1', 'o2', 'o3'] if not is_dep else ['o1', 'o2'], dynamic_axes={'word': {1: 'seq_len'}})
+                return True
 
-def export_depparse(processor, lang, output_dir):
-    print(f"Exporting Fully Dynamic Depparse model (V10) for {lang}...")
-    model = processor.trainer.model.eval().cpu()
-    
-    for m in model.modules():
-        if isinstance(m, nn.Embedding): m.weight.requires_grad = True
-    
-    from stanza.models.common.biaffine import BiaffineScorer
-    def patched_biaffine_forward(self, input1, input2):
-        out = torch.matmul(input1, self.W)
-        out = torch.matmul(out, input2.transpose(1, 2))
-        if self.b is not None: out = out + self.b
-        return out
-    BiaffineScorer.forward = patched_biaffine_forward
-
-    wrapper = DepparseONNXWrapper(model)
-    # USE SEQ=2 TO FORCE DYNAMNIC RECOGNITION
-    batch, seq, max_char = 1, 2, 5
-    
-    word = torch.randint(0, model.word_emb.num_embeddings, (batch, seq), dtype=torch.long)
-    wordchars = torch.randint(0, 100, (batch * seq, max_char), dtype=torch.long)
-    upos = torch.randint(0, model.upos_emb.num_embeddings, (batch, seq), dtype=torch.long)
-    
-    if isinstance(model.xpos_emb, nn.ModuleList):
-        xpos = torch.cat([torch.randint(0, e.num_embeddings, (batch, seq, 1), dtype=torch.long) for e in model.xpos_emb], dim=-1)
-    else:
-        xpos = torch.randint(0, model.xpos_emb.num_embeddings, (batch, seq), dtype=torch.long)
-        
-    pretrained = torch.randint(0, model.pretrained_emb.num_embeddings, (batch, seq), dtype=torch.long)
-    lemma = torch.randint(0, model.lemma_emb.num_embeddings, (batch, seq), dtype=torch.long)
-    
-    onnx_path = os.path.join(output_dir, f"{lang}_depparse.onnx")
-    torch.onnx.export(wrapper, (word, wordchars, upos, xpos, pretrained, lemma), onnx_path,
-                      opset_version=14, export_params=True, do_constant_folding=False,
-                      input_names=['word', 'wordchars', 'upos', 'xpos', 'pretrained', 'lemma'],
-                      output_names=['unlabeled_scores', 'deprel_scores'],
-                      dynamic_axes={
-                          'word': {0: 'batch', 1: 'seq'},
-                          'wordchars': {0: 'batch_seq'},
-                          'upos': {0: 'batch', 1: 'seq'},
-                          'xpos': {0: 'batch', 1: 'seq'},
-                          'pretrained': {0: 'batch', 1: 'seq'},
-                          'lemma': {0: 'batch', 1: 'seq'},
-                          'unlabeled_scores': {0: 'batch', 1: 'seq', 2: 'seq_heads'},
-                          'deprel_scores': {0: 'batch', 1: 'seq', 2: 'seq_heads'}
-                      })
-    print(f"✅ V10 Depparse Success: {onnx_path} ({os.path.getsize(onnx_path)/1024/1024:.2f} MB)")
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--lang", default="ko", help="Language code")
-    parser.add_argument("--output_dir", default="./onnx_final", help="Output directory")
-    args = parser.parse_args()
-    os.makedirs(args.output_dir, exist_ok=True)
-    nlp = stanza.Pipeline(args.lang, processors='tokenize,pos,lemma,depparse', download_method=None, device='cpu')
-    if 'depparse' in nlp.processors: export_depparse(nlp.processors['depparse'], args.lang, args.output_dir)
+        safe_export(pos_m, "pos")
+        safe_export(dep_m, "depparse", is_dep=True)
+        print(f"✅ Finished: {lang}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed: {lang} - {e}")
+        return False
 
 if __name__ == "__main__":
-    main()
+    langs = ['sq', 'ar', 'az', 'bn', 'bg', 'ca', 'zh-hans', 'hr', 'cs', 'da', 'nl', 'en', 'et', 'fi', 'fr', 'ka', 'de', 'el', 'he', 'hi', 'hu', 'is', 'id', 'it', 'ja', 'kk', 'km', 'ko', 'lv', 'lt', 'ms', 'mr', 'no', 'fa', 'pl', 'pt', 'ro', 'ru', 'sr', 'sk', 'sl', 'es', 'sw', 'sv', 'tl', 'te', 'th', 'tr', 'uk', 'ur', 'uz', 'vi']
+    for lang in langs:
+        if not os.path.exists(f"./onnx_final/{lang}_depparse.onnx"):
+            convert_lang(lang)

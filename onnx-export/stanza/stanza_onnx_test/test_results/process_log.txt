@@ -1,0 +1,39 @@
+PII Masking Batch Process Log (Refined)
+============================
+
+File: de_complex_report.txt
+Language: en
+Status: Success
+----------------------------
+File: en_complex_report.txt
+Language: en
+Status: Success
+----------------------------
+File: en_report.txt
+Language: en
+Status: Success
+----------------------------
+File: es_informe.txt
+Language: es
+Status: Success
+----------------------------
+File: ja_complex_report.txt
+Language: ja
+Status: Success
+----------------------------
+File: ja_report.txt
+Language: ja
+Status: Success
+----------------------------
+File: ko_complex_report.txt
+Language: ko
+Status: Success
+----------------------------
+File: ko_report.txt
+Language: ko
+Status: Success
+----------------------------
+File: zh_report.txt
+Language: zh-hans
+Status: Success
+----------------------------

@@ -1,0 +1,27 @@
+VERTRAULICH: PROJEKTBERICHT - ERWEITERT
+
+1. IDENTITÄT & AUSWEISE
+- Name: Hans Müller
+- Steuer-ID: 12 345 678 901
+- Reisepass: L78901234
+- Führerschein: G*********
+
+2. KONTAKTDATEN
+- E-Mail: ************************************
+- Telefon: +49 ***********
+- Adresse: Potsdamer Platz 1, 10785 Berlin
+
+3. LOGISTIK & LIEFERUNG
+- Sendungsnummer: JD************2345 (DHL)
+- Tor-****: 5566#
+- Hinweis: "Lieferung bitte an Rampe 2. Der Code für das Haupttor ist 0815."
+
+4. FINANZDATEN
+- IBAN: DE************ 1234 5678 **
+- BIC: DEUTDEBB
+- Kreditkarte: ************** 2345
+
+5. DIGITALE IDENTIFIKATOREN
+- Host-IP: 192.168.1.100
+- MAC-Adresse: 08:00:27:00:A6:49
+- Geräte-ID: AND-***********************2026

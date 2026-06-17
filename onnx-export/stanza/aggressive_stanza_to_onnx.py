@@ -1,90 +1,70 @@
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import stanza
 import os
-import logging
-import traceback
-import torch.nn as nn
+import json
+import inspect
+from stanza.models.pos.model import Tagger
+from stanza.models.depparse.model import GraphParser
 
-# 로그 설정
-logging.basicConfig(filename='aggressive_conversion.log', level=logging.INFO, 
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+# --- NUCLEAR PATCH: Directly override class methods ---
 
-def patch_model_dependencies(model):
-    """모델 로딩 오류를 방지하기 위해 필요한 의존성(Embedding 등)을 강제로 생성하여 주입."""
-    # POS/Depparse 모델에서 자주 발생하는 'NoneType' 에러 방지
-    for name, module in model.named_modules():
-        if isinstance(module, nn.Embedding) and module.weight is None:
-            print(f"--- Patching {name} with dummy weights ---")
-            module.weight = nn.Parameter(torch.randn(module.num_embeddings, module.embedding_dim))
-    return model
-
-def export_complex_model(model, inputs, onnx_path, input_names):
-    model.cpu()
-    model.eval()
-    model = patch_model_dependencies(model)
+def patched_tagger_forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text):
+    # This is a simplified, ONNX-friendly forward pass
+    # It avoids complex dynamic logic and pad_sequence
     
-    torch.onnx.export(
-        model, inputs, onnx_path,
-        export_params=True, opset_version=14, do_constant_folding=True,
-        input_names=input_names,
-        operator_export_type=torch.onnx.OperatorExportTypes.ONNX_ATEN_FALLBACK
-    )
-
-def get_complex_dummy_inputs(proc_name):
-    batch_size, seq_len = 1, 10
-    if proc_name == 'pos':
-        # Tagger forward: (self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text)
-        return (torch.randint(0, 100, (batch_size, seq_len), dtype=torch.long),
-                torch.ones((batch_size, seq_len), dtype=torch.bool),
-                torch.randint(0, 100, (batch_size, seq_len, 5), dtype=torch.long),
-                torch.ones((batch_size, seq_len, 5), dtype=torch.bool),
-                None, None, None, 
-                torch.randint(0, 100, (batch_size, seq_len), dtype=torch.long), # Pretrained (Long index)
-                torch.zeros((batch_size, seq_len), dtype=torch.long),
-                torch.tensor([seq_len], dtype=torch.long),
-                torch.ones((batch_size,), dtype=torch.long), # Flattened wordlens
-                ["dummy"]), ['word', 'word_mask', 'wordchars', 'wordchars_mask', 'upos', 'xpos', 'ufeats', 'pretrained', 'word_orig_idx', 'sentlens', 'wordlens', 'text']
-    elif proc_name == 'depparse':
-        # GraphParser forward: (self, word, word_mask, wordchars, wordchars_mask, pos, lemma, deprel, head, word_orig_idx, sentlens, wordlens, text)
-        return (torch.randint(0, 100, (batch_size, seq_len), dtype=torch.long),
-                torch.ones((batch_size, seq_len), dtype=torch.bool),
-                torch.randint(0, 100, (batch_size, seq_len, 5), dtype=torch.long),
-                torch.ones((batch_size, seq_len, 5), dtype=torch.bool),
-                None, None, None, None,
-                torch.zeros((batch_size, seq_len), dtype=torch.long),
-                torch.tensor([seq_len], dtype=torch.long),
-                torch.ones((batch_size,), dtype=torch.long), # Flattened wordlens
-                "dummy"), ['word', 'word_mask', 'wordchars', 'wordchars_mask', 'pos', 'lemma', 'deprel', 'head', 'word_orig_idx', 'sentlens', 'wordlens', 'text']
-    return None, None
-
-def aggressive_convert(lang='ko'):
-    output_dir = './onnx_models_aggressive'
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # 1. 의존성 무시하고 강제 Pipeline 로드
-    nlp = stanza.Pipeline(lang, processors='tokenize,pos,lemma,depparse')
-    
-    for proc_name, processor in nlp.processors.items():
-        if not hasattr(processor, 'trainer') or not processor.trainer.model:
-            continue
-            
-        print(f"\n--- Aggressive 변환 시도: {proc_name} ---")
-        onnx_path = os.path.join(output_dir, f"stanza_{lang}_{proc_name}.onnx")
+    # 1. Embeddings
+    inputs = []
+    if self.args['word_emb_dim'] > 0:
+        inputs.append(self.word_emb(word))
+    if self.args['pretrain']:
+        inputs.append(self.trans_pretrained(self.pretrained_emb(pretrained)))
+    if hasattr(self, 'charmodel') and self.charmodel:
+        # Assuming charmodel_forward is patched or safe
+        char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
+        inputs.append(self.trans_char(self.drop(char_reps)))
         
-        try:
-            model = processor.trainer.model
-            inputs, input_names = get_complex_dummy_inputs(proc_name)
-            
-            if inputs:
-                export_complex_model(model, inputs, onnx_path, input_names)
-                print(f"✅ {proc_name} 성공")
-            else:
-                print(f"ℹ️ {proc_name}는 변환 로직이 구현되지 않았습니다.")
-                
-        except Exception as e:
-            err_msg = f"{proc_name} 실패: {str(e)}\n{traceback.format_exc()}"
-            logging.error(err_msg)
-            print(f"❌ {proc_name} 실패 (로그 확인: aggressive_conversion.log)")
+    lstm_inputs = torch.cat(inputs, dim=-1)
+    # 2. LSTM (Bypass HighwayLSTM's complex logic if needed, but let's try direct)
+    lstm_outputs, _ = self.taggerlstm(lstm_inputs, sentlens)
+    
+    # 3. Classifiers
+    upos_hid = F.relu(self.upos_hid(self.drop(lstm_outputs)))
+    upos_pred = self.upos_clf(self.drop(upos_hid))
+    
+    # Return in format expected by wrapper (preds list)
+    return None, [upos_pred, upos_pred, upos_pred] # Dummy duplicates for xpos/ufeats if not needed
+
+# Apply the patch to the class
+# Tagger.forward = patched_tagger_forward
+
+# --- REFINED EXPORTER ---
+
+def export_stubborn_lang(lang):
+    print(f"\n🚀 Nuclear Processing: {lang}")
+    ONNX_DIR = "./onnx_final"
+    os.makedirs(ONNX_DIR, exist_ok=True)
+    
+    try:
+        # For stubborn languages, we might want to try even more aggressive nocharlm
+        stanza.download(lang, processors='tokenize,pos,lemma,depparse')
+        nlp = stanza.Pipeline(lang, processors='tokenize,pos,lemma,depparse')
+        
+        pos_model = nlp.processors['pos'].trainer.model
+        dep_model = nlp.processors['depparse'].trainer.model
+        
+        # Check if they use charlm
+        if hasattr(pos_model, 'charmodel') and pos_model.charmodel:
+             print(f"  {lang} uses charmodel, applying extra caution...")
+
+        # ... (rest of export logic similar to definitive v5 but with class-level patches)
+        # Actually, let's try a simpler fix first: just use Opset 15 or 17?
+        # No, Opset 14 is the most stable for many runtimes.
+        
+        print(f"✅ Still in development for {lang} nuclear mode.")
+    except Exception as e:
+        print(f"❌ Failed: {lang} - {e}")
 
 if __name__ == "__main__":
-    aggressive_convert('ko')
+    export_stubborn_lang('ja')

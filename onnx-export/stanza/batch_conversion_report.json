@@ -1,0 +1,394 @@
+{
+  "sq": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "combined_nocharlm"
+    }
+  },
+  "ar": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "az": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "bn": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "bg": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "ca": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "zh-hans": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "hr": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "cs": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "da": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "nl": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "en": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "combined_nocharlm"
+    }
+  },
+  "et": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "fi": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "combined_nocharlm"
+    }
+  },
+  "fr": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "combined_nocharlm"
+    }
+  },
+  "ka": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "de": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "combined_nocharlm"
+    }
+  },
+  "el": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "default"
+    }
+  },
+  "he": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "combined_nocharlm"
+    }
+  },
+  "hi": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "hu": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "is": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "id": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "it": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "combined_nocharlm"
+    }
+  },
+  "ja": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "combined_nocharlm"
+    }
+  },
+  "kk": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "km": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "ko": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "lv": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "lt": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "ms": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "mr": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "no": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "fa": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "pl": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "pt": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "ro": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "ru": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "sr": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "sk": {
+    "success": false,
+    "meta": {
+      "charlm": true,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "sl": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "es": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "combined_nocharlm"
+    }
+  },
+  "sw": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "sv": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "tl": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "te": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "th": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "tr": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  },
+  "uk": {
+    "success": false,
+    "meta": {
+      "charlm": false,
+      "bert": false,
+      "package": "standard (charlm?)"
+    }
+  }
+}

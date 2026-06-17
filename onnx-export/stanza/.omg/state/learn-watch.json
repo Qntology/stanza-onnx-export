@@ -1,6 +1,6 @@
 {
-  "last_session_id": "d81eeed5-803b-4b73-ba78-d83894119a59",
-  "last_event_key": "d81eeed5-803b-4b73-ba78-d83894119a59:transcript:db94a6791a0fecb03ffc4f32bae02eed045e09c164ae5ebaa64f850fd08d39bb",
+  "last_session_id": "f0445b03-634f-4e98-a848-69c43e1adea1",
+  "last_event_key": "f0445b03-634f-4e98-a848-69c43e1adea1:transcript:f79bb2e4b5f5ce276851974d95ef4c60c9314639599cbc30d8230c42401cf262",
   "last_prompted_session_id": "",
   "last_reason": "short-session",
   "last_prompted_at": "",
@@ -8,5 +8,5 @@
   "last_actionable_message_count": 0,
   "deep_interview_lock_active": false,
   "deep_interview_lock_source": "C:\\Users\\HP\\Desktop\\stanza\\.omg\\state\\deep-interview.json",
-  "updated_at": "2026-06-17T12:36:06.011Z"
+  "updated_at": "2026-06-17T20:59:23.664Z"
 }

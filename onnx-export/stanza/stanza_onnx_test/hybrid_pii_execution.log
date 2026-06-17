@@ -1,0 +1,10 @@
+Timestamp, Language, File, Status
+SystemTime { intervals: 134261934439963873 }, en, de_complex_report.txt, Success
+SystemTime { intervals: 134261934440151026 }, en, en_complex_report.txt, Success
+SystemTime { intervals: 134261934440279358 }, en, en_report.txt, Success
+SystemTime { intervals: 134261934440362974 }, es, es_informe.txt, Success
+SystemTime { intervals: 134261934440519533 }, ja, ja_complex_report.txt, Success
+SystemTime { intervals: 134261934440628771 }, ja, ja_report.txt, Success
+SystemTime { intervals: 134261934440764235 }, ko, ko_complex_report.txt, Success
+SystemTime { intervals: 134261934440851133 }, ko, ko_report.txt, Success
+SystemTime { intervals: 134261934440867286 }, zh-hans, zh_report.txt, Error: Non-zero status code returned while running Gather node. Name:'/model/embeddings/Gather' Status Message: indices element out of data bounds, idx=3460 must be within the inclusive range [-3460,3459]
