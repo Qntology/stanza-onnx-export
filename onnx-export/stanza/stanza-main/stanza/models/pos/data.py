@@ -6,7 +6,7 @@ from collections import namedtuple
 
 from torch.utils.data import DataLoader as DL
 from torch.utils.data.sampler import Sampler
-from torch.nn.utils.rnn import pad_sequence
+from stanza.models.common.traceable_utils import pad_sequence
 
 from stanza.models.common.bert_embedding import filter_data, needs_length_filter
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all

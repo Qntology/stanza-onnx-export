@@ -5,7 +5,7 @@ from collections import Counter, namedtuple
 import logging
 
 import torch
-from torch.nn.utils.rnn import pad_sequence
+from stanza.models.common.traceable_utils import pad_sequence
 from torch.utils.data import DataLoader as DL
 
 import stanza.models.common.seq2seq_constant as constant

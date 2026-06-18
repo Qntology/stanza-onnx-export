@@ -3,7 +3,7 @@ import torch.nn as nn
 import os
 import logging
 import math
-from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
+from stanza.models.common.traceable_utils import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from typing import List, Tuple
 

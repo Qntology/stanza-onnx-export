@@ -1,10 +1,10 @@
 {
   "strategy": "custom",
   "lane_models": {
-    "planning": "gemini-3-flash-preview",
-    "execution": "gemini-3-flash-preview",
-    "quick_edit": "gemini-3-flash-preview",
-    "review_verify": "gemini-3-flash-preview"
+    "planning": "gemini-3.1-flash-lite",
+    "execution": "gemini-3.1-flash-lite",
+    "quick_edit": "gemini-3.1-flash-lite",
+    "review_verify": "gemini-3.1-flash-lite"
   },
   "updated_at": "2026-06-17T19:42:00Z",
   "source": "omg:model"
