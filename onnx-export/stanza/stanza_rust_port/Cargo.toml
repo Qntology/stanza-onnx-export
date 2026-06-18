@@ -1,8 +1,0 @@
-[package]
-name = "stanza_rust_port"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-tch = "0.15.0"
-serde_json = "1.0"
