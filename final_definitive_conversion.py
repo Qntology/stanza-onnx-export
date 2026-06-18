@@ -47,7 +47,10 @@ def apply_global_patches():
 import stanza
 
 def convert_lang(lang):
-    ONNX_DIR = "./onnx_final"
+    # 언어별 하위 폴더 생성으로 경로 재지정
+    ONNX_DIR = f"./onnx_final/{lang}"
+    os.makedirs(ONNX_DIR, exist_ok=True)
+    
     print(f"\n🚀 {lang}")
     try: nlp = stanza.Pipeline(lang, processors='tokenize,pos,lemma,depparse', download_method=None)
     except: return
@@ -60,7 +63,13 @@ def convert_lang(lang):
             in_size = m.rnn.input_size
             num_feats = in_size - 32
             inputs = (torch.zeros(1, 100).long(), torch.zeros(1, 100, num_feats).float(), torch.tensor([100]).long())
-            torch.onnx.export(m, inputs, f"{ONNX_DIR}/{lang}_tokenizer.onnx", opset_version=14, 
+            
+            # 모델 구성 및 텐서 값 확인을 위한 로그
+            print(f"    [LOG] Tokenizer 모델 구성: rnn.input_size={in_size}, num_feats={num_feats}")
+            print(f"    [LOG] Tokenizer 입력 텐서 Shape: x={inputs[0].shape}, f={inputs[1].shape}, l={inputs[2].shape}")
+            
+            # 파일 경로를 변경된 폴더 구조에 맞게 수정
+            torch.onnx.export(m, inputs, f"{ONNX_DIR}/tokenizer.onnx", opset_version=14, 
                              input_names=['x','f','l'], output_names=['output'],
                              dynamic_axes={'x': {1: 'seq'}, 'f': {1: 'seq'}, 'output': {1: 'seq'}})
             print("    ✅ Done")
@@ -90,7 +99,12 @@ def convert_lang(lang):
                       torch.zeros(8, 32).long(), torch.ones(8, 32).bool(), 
                       torch.randint(1, 10, (1, 8)), torch.arange(8), torch.tensor([8]), torch.full((8,), 5))
             
-            torch.onnx.export(POSWrapper(m), inputs, f"{ONNX_DIR}/{lang}_pos.onnx", opset_version=14,
+            # 모델 구성 및 텐서 값 확인을 위한 로그
+            print(f"    [LOG] POS 모델 구성: word_emb_dim={m.args['word_emb_dim']}, pretrain={m.args['pretrain']}")
+            print(f"    [LOG] POS 입력 텐서 Shape: word={inputs[0].shape}, mask={inputs[1].shape}, pre={inputs[4].shape}, slen={inputs[6].shape}")
+            
+            # 파일 경로를 변경된 폴더 구조에 맞게 수정
+            torch.onnx.export(POSWrapper(m), inputs, f"{ONNX_DIR}/pos.onnx", opset_version=14,
                              input_names=['word','mask','chars','chars_mask','pre','oidx','slen','wlen'],
                              output_names=['upos'],
                              dynamic_axes={'word': {1: 'seq'}, 'mask': {1: 'seq'}, 'pre': {1: 'seq'}, 'upos': {1: 'seq'}})
@@ -137,12 +151,45 @@ def convert_lang(lang):
                       torch.zeros(1, 9).long(), torch.randint(1, 10, (1, 9)), 
                       torch.randint(1, 10, (1, 9)), torch.tensor([9]))
             
-            torch.onnx.export(DepWrapper(m), inputs, f"{ONNX_DIR}/{lang}_depparse.onnx", opset_version=14,
+            # 모델 구성 및 텐서 값 확인을 위한 로그
+            print(f"    [LOG] Depparse 모델 구성: parserlstm.input_size={m.parserlstm.input_size}, tag_emb_dim={m.args['tag_emb_dim']}")
+            print(f"    [LOG] Depparse 입력 텐서 Shape: word={inputs[0].shape}, mask={inputs[1].shape}, upos={inputs[2].shape}, pre={inputs[3].shape}, lemma={inputs[4].shape}, slen={inputs[5].shape}")
+            
+            # 파일 경로를 변경된 폴더 구조에 맞게 수정
+            torch.onnx.export(DepWrapper(m), inputs, f"{ONNX_DIR}/depparse.onnx", opset_version=14,
                              input_names=['word','mask','upos','pre','lemma','slen'],
                              output_names=['unlabeled','deprel'],
                              dynamic_axes={'word': {1: 'seq'}, 'mask': {1: 'seq'}, 'upos': {1: 'seq'}, 'pre': {1: 'seq'}, 'lemma': {1: 'seq'}, 'unlabeled': {1: 'seq', 2: 'seq'}, 'deprel': {1: 'seq', 2: 'seq'}})
             print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
+
+    # D. VOCAB EXTRACTION
+    try:
+        print("  📦 Vocab Extraction...")
+        vocab_data = {}
+        for proc_name in ['tokenize', 'pos', 'lemma', 'depparse']:
+            if proc_name in nlp.processors:
+                proc = nlp.processors[proc_name]
+                if hasattr(proc, 'vocab'):
+                    vocab_data[proc_name] = {}
+                    v = proc.vocab
+                    if hasattr(v, '_vocabs'): # MultiVocab 지원 프로세서
+                        for k, sub_v in v._vocabs.items():
+                            if hasattr(sub_v, '_id2unit'):
+                                vocab_data[proc_name][k] = sub_v._id2unit
+                    elif hasattr(v, '_id2unit'): # Single Vocab 프로세서
+                        vocab_data[proc_name]['main'] = v._id2unit
+        
+        if vocab_data:
+            vocab_path = f"{ONNX_DIR}/vocab.json"
+            with open(vocab_path, 'w', encoding='utf-8') as f:
+                json.dump(vocab_data, f, ensure_ascii=False, indent=2)
+            # Vocab 구성 및 저장 관련 확인 로그 추가
+            print(f"    [LOG] Vocab 구성 확인: 포함된 프로세서={list(vocab_data.keys())}")
+            print(f"    [LOG] Vocab 저장 경로: {vocab_path}")
+            print("    ✅ Done")
+    except Exception as e:
+        print(f"    ❌ {e}")
 
 if __name__ == "__main__":
     apply_global_patches()
