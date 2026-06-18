@@ -2,10 +2,11 @@ use ort::{
     session::{Session, builder::GraphOptimizationLevel},
     value::Value,
 };
-use ndarray::{Array2, Array3, Array1};
+use ndarray::{Array2, Array1};
 use std::path::Path;
 use std::fs::{self, File};
 use std::io::{Write, Read};
+use serde::{Serialize, Deserialize};
 
 mod config;
 mod model;
@@ -17,6 +18,21 @@ mod pii_scanner;
 
 use vocab::Vocab;
 use pii_scanner::{PiiScanner, StanzaResult};
+
+#[derive(Serialize)]
+struct PiiReport {
+    masked_text: String,
+    language_info: String,
+    entities: Vec<PiiEntity>,
+    status: String,
+}
+
+#[derive(Serialize, Clone, Debug)]
+struct PiiEntity {
+    word: String,
+    #[serde(rename = "type")]
+    entity_type: String,
+}
 
 struct HybridPiiProcessor {
     tokenizers: std::collections::HashMap<String, MultilingualTokenizer>,
@@ -35,19 +51,20 @@ impl MultilingualTokenizer {
     fn new(lang: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let model_path = format!("../onnx_final/{}_tokenizer.onnx", lang);
         let vocab_path = format!("../vocabs/{}_vocab_full.json", lang);
+        if !Path::new(&model_path).exists() { return Err(format!("Model not found: {}", model_path).into()); }
+        
         let session = Session::builder()?
             .with_optimization_level(GraphOptimizationLevel::Level3)?
             .commit_from_file(Path::new(&model_path))?;
         let vocab = Vocab::from_file(&vocab_path)?;
         
-        let config_path = format!("../onnx_final/{}_tokenizer_config.json", lang);
-        let mut feat_dim = 5;
-        if let Ok(mut file) = File::open(&config_path) {
-            let mut conf_str = String::new();
-            file.read_to_string(&mut conf_str)?;
-            let v: serde_json::Value = serde_json::from_str(&conf_str)?;
-            if let Some(fd) = v["feat_dim"].as_u64() { feat_dim = fd as usize; }
-        }
+        // Manual Map for feat_dim based on previous run errors
+        let feat_dim = match lang {
+            "ja" => 17,
+            "zh-hans" => 13,
+            _ => 5,
+        };
+        
         Ok(Self { session, vocab, feat_dim })
     }
 
@@ -57,16 +74,17 @@ impl MultilingualTokenizer {
         if seq_len == 0 { return Ok(vec![]); }
         let x_vec: Vec<i64> = chars.iter().map(|&c| self.vocab.get_char_id(c)).collect();
         let x = Array2::from_shape_vec((1, seq_len), x_vec)?;
-        let feats = Array3::from_elem((1, seq_len, self.feat_dim), 0f32);
-        let lengths = Array1::from_vec(vec![seq_len as i64]);
+        
+        let f = ndarray::Array3::from_elem((1, seq_len, self.feat_dim), 0f32);
+        let l = Array1::from_vec(vec![seq_len as i64]);
 
         let outputs = self.session.run(ort::inputs![
             "x" => Value::from_array(x)?,
-            "feats" => Value::from_array(feats)?,
-            "lengths" => Value::from_array(lengths)?,
+            "f" => Value::from_array(f)?,
+            "l" => Value::from_array(l)?,
         ])?;
         
-        let output_value = outputs.get("output").unwrap();
+        let output_value = outputs.get("output").ok_or("Output not found")?;
         let (_shape, data) = output_value.try_extract_tensor::<f32>()?;
         
         let mut tokens = Vec::new();
@@ -126,98 +144,113 @@ impl HybridPiiProcessor {
         Self { tokenizers, taggers, parsers, scanner: PiiScanner::new() }
     }
 
-    fn process(&mut self, text: &str, lang: &str) -> Result<String, Box<dyn std::error::Error>> {
-        println!("[Hybrid] Analyzing PII with Full Context: {}", lang);
+    fn process(&mut self, text: &str, lang: &str) -> Result<PiiReport, Box<dyn std::error::Error>> {
+        println!("  [Hybrid] Processing: {}", lang);
         let tokens: Vec<&str> = if let Some(tok) = self.tokenizers.get_mut(lang) {
-            tok.tokenize(text)?
+            match tok.tokenize(text) {
+                Ok(t) => t,
+                Err(e) => {
+                    println!("    ⚠️ Tokenizer error for {}: {}", lang, e);
+                    text.split_whitespace().collect()
+                }
+            }
         } else {
             text.split_whitespace().collect()
         };
-        if tokens.is_empty() { return Ok(text.to_string()); }
 
         let mut stanza_results = Vec::new();
         if let (Some(tagger), Some(parser)) = (self.taggers.get_mut(lang), self.parsers.get_mut(lang)) {
             let seq_len = tokens.len();
-            
-            // 1. Inputs
-            let word_ids: Vec<i64> = tokens.iter().map(|&w| tagger.vocab.get_word_id(w)).collect();
-            let word_ids_arr = Array2::from_shape_vec((1, seq_len), word_ids)?;
-            let pre_ids: Vec<i64> = tokens.iter().map(|&w| tagger.vocab.get_pre_id(w)).collect();
-            let pre_ids_arr = Array2::from_shape_vec((1, seq_len), pre_ids)?;
-            let mask = Array2::from_elem((1, seq_len), 1i64);
-            let oidx = Array1::from_iter(0..seq_len as i64);
-            let slen = Array1::from_vec(vec![seq_len as i64]);
-            let wlen = Array1::from_elem(seq_len, 5i64);
+            if seq_len > 0 {
+                let word_ids: Vec<i64> = tokens.iter().map(|&w| tagger.vocab.get_word_id(w)).collect();
+                let word_ids_arr = Array2::from_shape_vec((1, seq_len), word_ids)?;
+                let pre_ids: Vec<i64> = tokens.iter().map(|&w| tagger.vocab.get_pre_id(w)).collect();
+                let pre_ids_arr = Array2::from_shape_vec((1, seq_len), pre_ids)?;
 
-            // 2. POS Inference
-            let pos_outputs = tagger.session.run(ort::inputs![
-                "word" => Value::from_array(word_ids_arr.clone())?,
-                "word_mask" => Value::from_array(mask.clone())?,
-                "pretrained" => Value::from_array(pre_ids_arr.clone())?,
-                "word_orig_idx" => Value::from_array(oidx.clone())?,
-                "sentlens" => Value::from_array(slen.clone())?,
-                "wordlens" => Value::from_array(wlen.clone())?,
-            ])?;
+                let pos_outputs = tagger.session.run(ort::inputs![
+                    "word" => Value::from_array(word_ids_arr.clone())?,
+                    "pre" => Value::from_array(pre_ids_arr.clone())?,
+                ])?;
 
-            let upos_logits = pos_outputs.get("upos_preds").unwrap();
-            let (u_shape, u_data) = upos_logits.try_extract_tensor::<f32>()?;
-            let upos_dim = u_shape[2] as usize;
+                let upos_logits = pos_outputs.get("upos").ok_or("upos not found")?;
+                let (u_shape, u_data) = upos_logits.try_extract_tensor::<f32>()?;
+                let upos_dim = u_shape[2] as usize;
 
-            // 3. Depparse Inference (Wrapper takes root internally if needed)
-            let dummy_l = Array2::from_elem((1, seq_len), 0i64);
-            let dep_outputs = parser.session.run(ort::inputs![
-                "word" => Value::from_array(word_ids_arr.clone())?,
-                "word_mask" => Value::from_array(mask.clone())?,
-                "pretrained" => Value::from_array(pre_ids_arr.clone())?,
-                "word_orig_idx" => Value::from_array(oidx.clone())?,
-                "sentlens" => Value::from_array(slen.clone())?,
-                "wordlens" => Value::from_array(wlen.clone())?,
-                "lemma" => Value::from_array(dummy_l.clone())?,
-                "head" => Value::from_array(dummy_l.clone())?,
-                "deprel" => Value::from_array(dummy_l.clone())?,
-            ])?;
+                let upos_indices: Vec<i64> = (0..seq_len).map(|i| {
+                    let mut max_idx = 0;
+                    let mut max_val = f32::MIN;
+                    for j in 0..upos_dim {
+                        let val = u_data[i * upos_dim + j];
+                        if val > max_val { max_val = val; max_idx = j; }
+                    }
+                    max_idx as i64
+                }).collect();
+                let upos_arr = Array2::from_shape_vec((1, seq_len), upos_indices)?;
+                // FIX: Use zeros for lemma to avoid out-of-bounds in arc embedding if it expects specific lemma IDs
+                let lemma_arr = Array2::from_elem((1, seq_len), 0i64);
 
-            let deprel_logits = dep_outputs.get("deprel_scores").unwrap();
-            let (d_shape, d_data) = deprel_logits.try_extract_tensor::<f32>()?;
-            let deprel_dim = d_shape[2] as usize;
+                let dep_outputs = parser.session.run(ort::inputs![
+                    "word" => Value::from_array(word_ids_arr)?,
+                    "upos" => Value::from_array(upos_arr)?,
+                    "pre" => Value::from_array(pre_ids_arr)?,
+                    "lemma" => Value::from_array(lemma_arr)?,
+                ])?;
 
-            for i in 0..seq_len {
-                // Get UPOS
-                let mut max_u_idx = 0;
-                let mut max_u_val = f32::MIN;
-                for j in 0..upos_dim {
-                    let val = u_data[i * upos_dim + j];
-                    if val > max_u_val { max_u_val = val; max_u_idx = j; }
+                let deprel_logits = dep_outputs.get("deprel").ok_or("deprel not found")?;
+                let (d_shape, d_data) = deprel_logits.try_extract_tensor::<f32>()?;
+                let deprel_dim = d_shape[2] as usize;
+
+                for i in 0..seq_len {
+                    let mut max_u_idx = 0;
+                    let mut max_u_val = f32::MIN;
+                    for j in 0..upos_dim {
+                        let val = u_data[i * upos_dim + j];
+                        if val > max_u_val { max_u_val = val; max_u_idx = j; }
+                    }
+                    let upos = tagger.vocab.get_upos(max_u_idx);
+
+                    let mut max_d_idx = 0;
+                    let mut max_d_val = f32::MIN;
+                    for j in 0..deprel_dim {
+                        let val = d_data[i * deprel_dim + j];
+                        if val > max_d_val { max_d_val = val; max_d_idx = j; }
+                    }
+                    let deprel = parser.vocab.get_deprel(max_d_idx);
+
+                    stanza_results.push(StanzaResult {
+                        text: tokens[i].to_string(),
+                        upos,
+                        head: 0,
+                        deprel,
+                    });
                 }
-                let upos = tagger.vocab.get_upos(max_u_idx);
-
-                // Get Deprel
-                let mut max_d_idx = 0;
-                let mut max_d_val = f32::MIN;
-                for j in 0..deprel_dim {
-                    let val = d_data[i * deprel_dim + j];
-                    if val > max_d_val { max_d_val = val; max_d_idx = j; }
-                }
-                let deprel = parser.vocab.get_deprel(max_d_idx);
-
-                stanza_results.push(StanzaResult {
-                    text: tokens[i].to_string(),
-                    upos: upos.to_string(),
-                    head: 0, // Simplified
-                    deprel: deprel.to_string(),
-                });
             }
         }
 
         let masked_text = self.scanner.apply_tiered_masking(text, &stanza_results, lang);
-        Ok(masked_text)
+        
+        let mut entities = Vec::new();
+        if masked_text != text {
+            entities.push(PiiEntity {
+                word: "Detected PII Block".to_string(),
+                entity_type: format!("{}_PII", lang.to_uppercase()),
+            });
+        }
+
+        Ok(PiiReport {
+            masked_text,
+            language_info: format!("Lang: {}", lang),
+            entities,
+            status: "PII Tiered Processing Complete".to_string(),
+        })
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("🚀 Initializing Hybrid PII Processor...");
     let mut processor = HybridPiiProcessor::new();
     let input_dir = "../pii/test_docs";
-    let output_dir = "test_results_hybrid";
+    let output_dir = "test_results_json";
     fs::create_dir_all(output_dir)?;
 
     for entry in fs::read_dir(input_dir)? {
@@ -229,15 +262,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                        else if file_name.starts_with("zh_") { "zh-hans" }
                        else { "en" };
             
+            println!("📄 Reading: {}", file_name);
             let mut content = String::new();
             File::open(entry.path())?.read_to_string(&mut content)?;
-            if let Ok(masked) = processor.process(&content, lang) {
-                let out_path = Path::new(output_dir).join(format!("hybrid_masked_{}", file_name));
-                let mut out = File::create(out_path)?;
-                out.write_all(masked.as_bytes())?;
+            
+            match processor.process(&content, lang) {
+                Ok(report) => {
+                    let out_path = Path::new(output_dir).join(format!("masked_{}.json", file_name));
+                    println!("  💾 Saving result to: {:?}", out_path);
+                    let mut out = File::create(out_path)?;
+                    let json = serde_json::to_string_pretty(&report)?;
+                    out.write_all(json.as_bytes())?;
+                },
+                Err(e) => {
+                    println!("  ❌ Error processing {}: {}", file_name, e);
+                }
             }
         }
     }
-    println!("Linguistic-Aware PII Parity complete.");
+    println!("✅ Multilingual ONNX PII Processing complete.");
     Ok(())
 }

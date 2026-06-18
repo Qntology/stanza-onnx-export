@@ -30,6 +30,7 @@ def apply_global_patches():
     import stanza.models.common.hlstm as hlstm
     import stanza.models.common.packed_lstm as packed_lstm
     def hlstm_forward(self, input, seqlens, hx=None):
+        highway_func = (lambda x: x) if self.highway_func is None else self.highway_func
         hs, cs = [], []
         for l in range(self.num_layers):
             if self.dropout > 0 and l > 0: input = self.drop(input)
@@ -60,7 +61,8 @@ def convert_lang(lang):
             num_feats = in_size - 32
             inputs = (torch.zeros(1, 100).long(), torch.zeros(1, 100, num_feats).float(), torch.tensor([100]).long())
             torch.onnx.export(m, inputs, f"{ONNX_DIR}/{lang}_tokenizer.onnx", opset_version=14, 
-                             input_names=['x','f','l'], output_names=['output'])
+                             input_names=['x','f','l'], output_names=['output'],
+                             dynamic_axes={'x': {1: 'seq'}, 'f': {1: 'seq'}, 'output': {1: 'seq'}})
             print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
@@ -90,7 +92,8 @@ def convert_lang(lang):
             
             torch.onnx.export(POSWrapper(m), inputs, f"{ONNX_DIR}/{lang}_pos.onnx", opset_version=14,
                              input_names=['word','mask','chars','chars_mask','pre','oidx','slen','wlen'],
-                             output_names=['upos'])
+                             output_names=['upos'],
+                             dynamic_axes={'word': {1: 'seq'}, 'mask': {1: 'seq'}, 'pre': {1: 'seq'}, 'upos': {1: 'seq'}})
             print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
@@ -136,7 +139,8 @@ def convert_lang(lang):
             
             torch.onnx.export(DepWrapper(m), inputs, f"{ONNX_DIR}/{lang}_depparse.onnx", opset_version=14,
                              input_names=['word','mask','upos','pre','lemma','slen'],
-                             output_names=['unlabeled','deprel'])
+                             output_names=['unlabeled','deprel'],
+                             dynamic_axes={'word': {1: 'seq'}, 'mask': {1: 'seq'}, 'upos': {1: 'seq'}, 'pre': {1: 'seq'}, 'lemma': {1: 'seq'}, 'unlabeled': {1: 'seq', 2: 'seq'}, 'deprel': {1: 'seq', 2: 'seq'}})
             print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
