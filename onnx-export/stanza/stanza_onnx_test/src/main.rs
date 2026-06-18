@@ -65,18 +65,27 @@ impl MultilingualTokenizer {
         let channels = if shape.len() == 3 { shape[2] as usize } else { 1 };
 
         for i in 0..seq_len {
-            // Use a very permissive threshold for log-probs to catch ANY boundary
-            let is_boundary = if channels >= 2 {
-                data[i * channels + 1] > -1.0 // Prob > 0.36
+            let mut max_idx = 0;
+            let mut max_val = f32::MIN;
+            if channels >= 2 {
+                for j in 0..channels {
+                    let val = data[i * channels + j];
+                    if val > max_val { max_val = val; max_idx = j; }
+                }
+            }
+            
+            // Channel 1 or 2 often represent boundaries (Space or No-Space boundary)
+            let is_boundary = if channels >= 3 {
+                max_idx == 1 || max_idx == 2
+            } else if channels == 2 {
+                max_idx == 1
             } else {
-                data[i] > -1.0
+                data[i] > 0.0
             };
 
             if is_boundary || i == seq_len - 1 {
-                let char_start = current_start;
-                let char_end = i + 1;
-                let byte_start = text.char_indices().nth(char_start).map(|(idx, _)| idx).unwrap_or(text.len());
-                let byte_end = text.char_indices().nth(char_end - 1).map(|(idx, c)| idx + c.len_utf8()).unwrap_or(text.len());
+                let byte_start = text.char_indices().nth(current_start).map(|(idx, _)| idx).unwrap_or(text.len());
+                let byte_end = text.char_indices().nth(i).map(|(idx, c)| idx + c.len_utf8()).unwrap_or(text.len());
                 if byte_end > byte_start {
                     tokens.push(&text[byte_start..byte_end]);
                 }
