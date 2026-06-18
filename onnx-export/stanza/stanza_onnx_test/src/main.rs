@@ -58,14 +58,28 @@ impl MultilingualTokenizer {
         let x = Array2::from_shape_vec((1, seq_len), chars.iter().map(|&c| self.vocab.get_char_id(c)).collect())?;
         let outputs = self.session.run(ort::inputs!["x" => Value::from_array(x)?, "f" => Value::from_array(ndarray::Array3::from_elem((1, seq_len, self.feat_dim), 0f32))?, "l" => Value::from_array(Array1::from_vec(vec![seq_len as i64]))?])?;
         let output_value = outputs.get("output").unwrap();
-        let (_shape, data) = output_value.try_extract_tensor::<f32>()?;
+        let (shape, data) = output_value.try_extract_tensor::<f32>()?;
+        
         let mut tokens = Vec::new();
         let mut current_start = 0;
+        let channels = if shape.len() == 3 { shape[2] as usize } else { 1 };
+
         for i in 0..seq_len {
-            if data[i] > 0.5 || i == seq_len - 1 {
-                let byte_start = text.char_indices().nth(current_start).map(|(idx, _)| idx).unwrap_or(text.len());
-                let byte_end = text.char_indices().nth(i).map(|(idx, c)| idx + c.len_utf8()).unwrap_or(text.len());
-                tokens.push(&text[byte_start..byte_end]);
+            // Use a very permissive threshold for log-probs to catch ANY boundary
+            let is_boundary = if channels >= 2 {
+                data[i * channels + 1] > -1.0 // Prob > 0.36
+            } else {
+                data[i] > -1.0
+            };
+
+            if is_boundary || i == seq_len - 1 {
+                let char_start = current_start;
+                let char_end = i + 1;
+                let byte_start = text.char_indices().nth(char_start).map(|(idx, _)| idx).unwrap_or(text.len());
+                let byte_end = text.char_indices().nth(char_end - 1).map(|(idx, c)| idx + c.len_utf8()).unwrap_or(text.len());
+                if byte_end > byte_start {
+                    tokens.push(&text[byte_start..byte_end]);
+                }
                 current_start = i + 1;
             }
         }
@@ -126,15 +140,6 @@ impl HybridPiiProcessor {
                     for j in 0..upos_dim { let val = u_data[i * upos_dim + j]; if val > max_val { max_val = val; max_idx = j; } }
                     max_idx as i64
                 }).collect();
-                
-                // --- DEBUG: Print predicted UPOS ---
-                if lang == "ko" {
-                    println!("    [DEBUG] Predicted UPOS for {}:", lang);
-                    for i in 0..std::cmp::min(seq_len, 20) {
-                        println!("      - {}: {}", tokens[i], tagger.vocab.get_upos(upos_indices[i] as usize));
-                    }
-                }
-
                 let dep_outputs = parser.session.run(ort::inputs!["word" => Value::from_array(word_ids_arr)?, "upos" => Value::from_array(Array2::from_shape_vec((1, seq_len), upos_indices.clone())?)?, "pre" => Value::from_array(pre_ids_arr)?, "lemma" => Value::from_array(Array2::from_elem((1, seq_len), 0i64))?])?;
                 let deprel_logits = dep_outputs.get("deprel").unwrap();
                 let (d_shape, d_data) = deprel_logits.try_extract_tensor::<f32>()?;
@@ -181,6 +186,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    println!("✅ Multilingual ONNX PII Processing complete with Granite Procedure Simulation.");
+    println!("✅ Multilingual ONNX PII Processing complete.");
     Ok(())
 }
