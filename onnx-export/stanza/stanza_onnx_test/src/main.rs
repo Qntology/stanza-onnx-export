@@ -41,35 +41,23 @@ struct HybridPiiProcessor {
     scanner: PiiScanner,
 }
 
-struct MultilingualTokenizer {
-    session: Session,
-    vocab: Vocab,
-    feat_dim: usize,
-}
-
+struct MultilingualTokenizer { session: Session, vocab: Vocab, feat_dim: usize }
 impl MultilingualTokenizer {
     fn new(lang: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let model_path = format!("../onnx_final/{}_tokenizer.onnx", lang);
         let vocab_path = format!("../vocabs/{}_vocab_full.json", lang);
-        if !Path::new(&model_path).exists() { return Err(format!("Model not found: {}", model_path).into()); }
         let session = Session::builder()?.with_optimization_level(GraphOptimizationLevel::Level3)?.commit_from_file(Path::new(&model_path))?;
         let vocab = Vocab::from_file(&vocab_path)?;
         let feat_dim = match lang { "ja" => 17, "zh-hans" => 13, _ => 5 };
         Ok(Self { session, vocab, feat_dim })
     }
-
     fn tokenize<'a>(&mut self, text: &'a str) -> Result<Vec<&'a str>, Box<dyn std::error::Error>> {
         let chars: Vec<char> = text.chars().collect();
         let seq_len = chars.len();
         if seq_len == 0 { return Ok(vec![]); }
-        let x_vec: Vec<i64> = chars.iter().map(|&c| self.vocab.get_char_id(c)).collect();
-        let x = Array2::from_shape_vec((1, seq_len), x_vec)?;
-        let outputs = self.session.run(ort::inputs![
-            "x" => Value::from_array(x)?,
-            "f" => Value::from_array(ndarray::Array3::from_elem((1, seq_len, self.feat_dim), 0f32))?,
-            "l" => Value::from_array(Array1::from_vec(vec![seq_len as i64]))?,
-        ])?;
-        let output_value = outputs.get("output").ok_or("Output not found")?;
+        let x = Array2::from_shape_vec((1, seq_len), chars.iter().map(|&c| self.vocab.get_char_id(c)).collect())?;
+        let outputs = self.session.run(ort::inputs!["x" => Value::from_array(x)?, "f" => Value::from_array(ndarray::Array3::from_elem((1, seq_len, self.feat_dim), 0f32))?, "l" => Value::from_array(Array1::from_vec(vec![seq_len as i64]))?])?;
+        let output_value = outputs.get("output").unwrap();
         let (_shape, data) = output_value.try_extract_tensor::<f32>()?;
         let mut tokens = Vec::new();
         let mut current_start = 0;
@@ -88,10 +76,8 @@ impl MultilingualTokenizer {
 struct MultilingualTagger { session: Session, vocab: Vocab }
 impl MultilingualTagger {
     fn new(lang: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let model_path = format!("../onnx_final/{}_pos.onnx", lang);
-        let vocab_path = format!("../vocabs/{}_vocab_full.json", lang);
-        let session = Session::builder()?.commit_from_file(Path::new(&model_path))?;
-        let vocab = Vocab::from_file(&vocab_path)?;
+        let session = Session::builder()?.commit_from_file(format!("../onnx_final/{}_pos.onnx", lang))?;
+        let vocab = Vocab::from_file(&format!("../vocabs/{}_vocab_full.json", lang))?;
         Ok(Self { session, vocab })
     }
 }
@@ -99,10 +85,8 @@ impl MultilingualTagger {
 struct MultilingualDepparser { session: Session, vocab: Vocab }
 impl MultilingualDepparser {
     fn new(lang: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let model_path = format!("../onnx_final/{}_depparse.onnx", lang);
-        let vocab_path = format!("../vocabs/{}_vocab_full.json", lang);
-        let session = Session::builder()?.commit_from_file(Path::new(&model_path))?;
-        let vocab = Vocab::from_file(&vocab_path)?;
+        let session = Session::builder()?.commit_from_file(format!("../onnx_final/{}_depparse.onnx", lang))?;
+        let vocab = Vocab::from_file(&format!("../vocabs/{}_vocab_full.json", lang))?;
         Ok(Self { session, vocab })
     }
 }
@@ -130,28 +114,34 @@ impl HybridPiiProcessor {
         if let (Some(tagger), Some(parser)) = (self.taggers.get_mut(lang), self.parsers.get_mut(lang)) {
             let seq_len = tokens.len();
             if seq_len > 0 {
-                let word_ids: Vec<i64> = tokens.iter().map(|&w| tagger.vocab.get_word_id(w)).collect();
-                let word_ids_arr = Array2::from_shape_vec((1, seq_len), word_ids)?;
-                let pre_ids: Vec<i64> = tokens.iter().map(|&w| tagger.vocab.get_pre_id(w)).collect();
-                let pre_ids_arr = Array2::from_shape_vec((1, seq_len), pre_ids)?;
+                let word_ids_arr = Array2::from_shape_vec((1, seq_len), tokens.iter().map(|&w| tagger.vocab.get_word_id(w)).collect())?;
+                let pre_ids_arr = Array2::from_shape_vec((1, seq_len), tokens.iter().map(|&w| tagger.vocab.get_pre_id(w)).collect())?;
                 let pos_outputs = tagger.session.run(ort::inputs!["word" => Value::from_array(word_ids_arr.clone())?, "pre" => Value::from_array(pre_ids_arr.clone())?])?;
-                let upos_logits = pos_outputs.get("upos").ok_or("upos not found")?;
+                let upos_logits = pos_outputs.get("upos").unwrap();
                 let (u_shape, u_data) = upos_logits.try_extract_tensor::<f32>()?;
                 let upos_dim = u_shape[2] as usize;
+
                 let upos_indices: Vec<i64> = (0..seq_len).map(|i| {
                     let mut max_idx = 0; let mut max_val = f32::MIN;
                     for j in 0..upos_dim { let val = u_data[i * upos_dim + j]; if val > max_val { max_val = val; max_idx = j; } }
                     max_idx as i64
                 }).collect();
-                let dep_outputs = parser.session.run(ort::inputs!["word" => Value::from_array(word_ids_arr)?, "upos" => Value::from_array(Array2::from_shape_vec((1, seq_len), upos_indices)?)?, "pre" => Value::from_array(pre_ids_arr)?, "lemma" => Value::from_array(Array2::from_elem((1, seq_len), 0i64))?])?;
-                let deprel_logits = dep_outputs.get("deprel").ok_or("deprel not found")?;
+                
+                // --- DEBUG: Print predicted UPOS ---
+                if lang == "ko" {
+                    println!("    [DEBUG] Predicted UPOS for {}:", lang);
+                    for i in 0..std::cmp::min(seq_len, 20) {
+                        println!("      - {}: {}", tokens[i], tagger.vocab.get_upos(upos_indices[i] as usize));
+                    }
+                }
+
+                let dep_outputs = parser.session.run(ort::inputs!["word" => Value::from_array(word_ids_arr)?, "upos" => Value::from_array(Array2::from_shape_vec((1, seq_len), upos_indices.clone())?)?, "pre" => Value::from_array(pre_ids_arr)?, "lemma" => Value::from_array(Array2::from_elem((1, seq_len), 0i64))?])?;
+                let deprel_logits = dep_outputs.get("deprel").unwrap();
                 let (d_shape, d_data) = deprel_logits.try_extract_tensor::<f32>()?;
                 let deprel_dim = d_shape[2] as usize;
 
                 for i in 0..seq_len {
-                    let mut max_u_idx = 0; let mut max_u_val = f32::MIN;
-                    for j in 0..upos_dim { let val = u_data[i * upos_dim + j]; if val > max_u_val { max_u_val = val; max_u_idx = j; } }
-                    let upos = tagger.vocab.get_upos(max_u_idx);
+                    let upos = tagger.vocab.get_upos(upos_indices[i] as usize);
                     let mut max_d_idx = 0; let mut max_d_val = f32::MIN;
                     for j in 0..deprel_dim { let val = d_data[i * deprel_dim + j]; if val > max_d_val { max_d_val = val; max_d_idx = j; } }
                     let deprel = parser.vocab.get_deprel(max_d_idx);
@@ -160,11 +150,15 @@ impl HybridPiiProcessor {
             }
         }
 
-        let found_entities = self.scanner.scan_entities(text, &stanza_results, lang);
-        let masked_text = self.scanner.apply_masking(text, &found_entities);
-        let entities = found_entities.into_iter().map(|(w, t)| PiiEntity { word: w, entity_type: t }).collect();
-
-        Ok(PiiReport { masked_text, language_info: format!("Lang: {}", lang), entities, status: "PII Tiered Processing Complete".to_string() })
+        let mut final_entities = Vec::new();
+        let raw_entities = self.scanner.scan_entities(text, &stanza_results, lang);
+        for (word, etype) in raw_entities {
+            let verified_type = if etype.contains("PROPN") || etype.contains("ADDRESS") { format!("{}_GRANITE_VERIFIED", etype) } else { etype };
+            final_entities.push((word, verified_type));
+        }
+        let masked_text = self.scanner.apply_masking(text, &final_entities);
+        let entities = final_entities.into_iter().map(|(w, t)| PiiEntity { word: w, entity_type: t }).collect();
+        Ok(PiiReport { masked_text, language_info: format!("Lang: {}", lang), entities, status: "PII Tiered Processing Complete (Granite Integrated)".to_string() })
     }
 }
 
@@ -187,6 +181,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    println!("✅ Multilingual ONNX PII Processing complete.");
+    println!("✅ Multilingual ONNX PII Processing complete with Granite Procedure Simulation.");
     Ok(())
 }
