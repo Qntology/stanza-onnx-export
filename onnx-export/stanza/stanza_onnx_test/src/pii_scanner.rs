@@ -40,70 +40,72 @@ impl PiiScanner {
         Self { address_dict }
     }
 
-    pub fn apply_tiered_masking(&self, text: &str, stanza: &[StanzaResult], lang: &str) -> String {
-        let mut masked_text = text.to_string();
-        let mut entities_to_mask = Vec::new();
+    pub fn scan_entities(&self, text: &str, stanza: &[StanzaResult], lang: &str) -> Vec<(String, String)> {
+        let mut entities = Vec::new();
+        let tag_prefix = lang.to_uppercase();
 
-        // 1. Tier: Stanza-based Entity Merging (Matches Python refine_entities_with_hint)
+        // 1. Regex
+        for mat in EMAIL_REGEX.find_iter(text) {
+            entities.push((mat.as_str().to_string(), format!("{}_EMAIL", tag_prefix)));
+        }
+        for mat in PHONE_REGEX.find_iter(text) {
+            entities.push((mat.as_str().to_string(), format!("{}_PHONE", tag_prefix)));
+        }
+
+        // 2. Linguistic (Stanza)
         let mut i = 0;
         while i < stanza.len() {
             let res = &stanza[i];
-            
-            // Check for potential PII start (Linguistic context)
-            let is_candidate = res.upos == "PROPN" 
-                             || res.upos == "NUM"
-                             || self.is_address_part(&res.text, lang);
+            let is_cand = res.upos == "PROPN" || self.is_address_part(&res.text, lang);
 
-            if is_candidate {
-                let mut block_tokens = vec![res.text.clone()];
+            if is_cand {
+                let mut combined = res.text.clone();
                 let mut j = i + 1;
                 while j < stanza.len() {
                     let next = &stanza[j];
-                    // Python logic: combine if deprel in ['flat', 'compound', 'flat:name', 'nummod']
-                    let is_linked = next.deprel == "flat" 
-                                 || next.deprel == "compound" 
-                                 || next.deprel == "flat:name" 
-                                 || next.deprel == "nummod"
-                                 || (next.upos == "PROPN" && res.upos == "PROPN") // Heuristic: consecutive names
-                                 || self.is_address_part(&next.text, lang);
+                    // More conservative merging
+                    let should_merge = (next.deprel == "flat" || next.deprel == "compound" || next.deprel == "flat:name")
+                                    && (next.upos == "PROPN" || next.upos == "NOUN" || next.upos == "NUM" || self.is_address_part(&next.text, lang));
                     
-                    if is_linked {
-                        block_tokens.push(next.text.clone());
+                    if should_merge {
+                        // Try with space first, then without
+                        let with_space = format!("{} {}", combined, next.text);
+                        let no_space = format!("{}{}", combined, next.text);
+                        if text.contains(&with_space) { combined = with_space; }
+                        else if text.contains(&no_space) { combined = no_space; }
+                        else { break; }
                         j += 1;
                     } else { break; }
                 }
                 
-                let combined = block_tokens.join(" ");
                 if combined.chars().count() >= 2 {
-                    entities_to_mask.push(combined);
+                    let ent_type = if self.is_address_part(&combined, lang) { "ADDRESS" } else { "PROPN" };
+                    entities.push((combined, format!("{}_{}", tag_prefix, ent_type)));
                 }
                 i = j;
-                continue;
+            } else {
+                i += 1;
             }
-            i += 1;
         }
+        
+        entities.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+        entities.dedup();
+        entities
+    }
 
-        // 2. Tier: Regex
-        for mat in EMAIL_REGEX.find_iter(text) { entities_to_mask.push(mat.as_str().to_string()); }
-        for mat in PHONE_REGEX.find_iter(text) { entities_to_mask.push(mat.as_str().to_string()); }
-
-        // Sort by length DESC and mask
-        entities_to_mask.sort_by(|a, b| b.len().cmp(&a.len()));
-        entities_to_mask.dedup();
-
-        for ent in entities_to_mask {
-            if ent.trim().is_empty() || ent.len() < 2 { continue; }
-            let mask = "*".repeat(ent.chars().count());
-            // Exact character count replacement to match Python's visual output
-            masked_text = masked_text.replace(&ent, &mask);
+    pub fn apply_masking(&self, text: &str, entities: &[(String, String)]) -> String {
+        let mut masked = text.to_string();
+        for (word, _) in entities {
+            if word.trim().is_empty() || word.len() < 2 { continue; }
+            let mask = "*".repeat(word.chars().count());
+            masked = masked.replace(word, &mask);
         }
-
-        masked_text
+        masked
     }
 
     fn is_address_part(&self, text: &str, lang: &str) -> bool {
         if let Some(info) = self.address_dict.get(lang) {
-            info.admin.iter().any(|a| text.contains(a)) || info.street.iter().any(|s| text.contains(s))
+            info.admin.iter().any(|a| text == a || text.ends_with(a)) || info.street.iter().any(|s| text == s || text.ends_with(s))
         } else { false }
     }
 }

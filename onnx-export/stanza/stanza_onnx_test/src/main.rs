@@ -52,19 +52,9 @@ impl MultilingualTokenizer {
         let model_path = format!("../onnx_final/{}_tokenizer.onnx", lang);
         let vocab_path = format!("../vocabs/{}_vocab_full.json", lang);
         if !Path::new(&model_path).exists() { return Err(format!("Model not found: {}", model_path).into()); }
-        
-        let session = Session::builder()?
-            .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .commit_from_file(Path::new(&model_path))?;
+        let session = Session::builder()?.with_optimization_level(GraphOptimizationLevel::Level3)?.commit_from_file(Path::new(&model_path))?;
         let vocab = Vocab::from_file(&vocab_path)?;
-        
-        // Manual Map for feat_dim based on previous run errors
-        let feat_dim = match lang {
-            "ja" => 17,
-            "zh-hans" => 13,
-            _ => 5,
-        };
-        
+        let feat_dim = match lang { "ja" => 17, "zh-hans" => 13, _ => 5 };
         Ok(Self { session, vocab, feat_dim })
     }
 
@@ -74,19 +64,13 @@ impl MultilingualTokenizer {
         if seq_len == 0 { return Ok(vec![]); }
         let x_vec: Vec<i64> = chars.iter().map(|&c| self.vocab.get_char_id(c)).collect();
         let x = Array2::from_shape_vec((1, seq_len), x_vec)?;
-        
-        let f = ndarray::Array3::from_elem((1, seq_len, self.feat_dim), 0f32);
-        let l = Array1::from_vec(vec![seq_len as i64]);
-
         let outputs = self.session.run(ort::inputs![
             "x" => Value::from_array(x)?,
-            "f" => Value::from_array(f)?,
-            "l" => Value::from_array(l)?,
+            "f" => Value::from_array(ndarray::Array3::from_elem((1, seq_len, self.feat_dim), 0f32))?,
+            "l" => Value::from_array(Array1::from_vec(vec![seq_len as i64]))?,
         ])?;
-        
         let output_value = outputs.get("output").ok_or("Output not found")?;
         let (_shape, data) = output_value.try_extract_tensor::<f32>()?;
-        
         let mut tokens = Vec::new();
         let mut current_start = 0;
         for i in 0..seq_len {
@@ -101,11 +85,7 @@ impl MultilingualTokenizer {
     }
 }
 
-struct MultilingualTagger {
-    session: Session,
-    vocab: Vocab,
-}
-
+struct MultilingualTagger { session: Session, vocab: Vocab }
 impl MultilingualTagger {
     fn new(lang: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let model_path = format!("../onnx_final/{}_pos.onnx", lang);
@@ -116,11 +96,7 @@ impl MultilingualTagger {
     }
 }
 
-struct MultilingualDepparser {
-    session: Session,
-    vocab: Vocab,
-}
-
+struct MultilingualDepparser { session: Session, vocab: Vocab }
 impl MultilingualDepparser {
     fn new(lang: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let model_path = format!("../onnx_final/{}_depparse.onnx", lang);
@@ -147,16 +123,8 @@ impl HybridPiiProcessor {
     fn process(&mut self, text: &str, lang: &str) -> Result<PiiReport, Box<dyn std::error::Error>> {
         println!("  [Hybrid] Processing: {}", lang);
         let tokens: Vec<&str> = if let Some(tok) = self.tokenizers.get_mut(lang) {
-            match tok.tokenize(text) {
-                Ok(t) => t,
-                Err(e) => {
-                    println!("    ⚠️ Tokenizer error for {}: {}", lang, e);
-                    text.split_whitespace().collect()
-                }
-            }
-        } else {
-            text.split_whitespace().collect()
-        };
+            tok.tokenize(text).unwrap_or_else(|_| text.split_whitespace().collect())
+        } else { text.split_whitespace().collect() };
 
         let mut stanza_results = Vec::new();
         if let (Some(tagger), Some(parser)) = (self.taggers.get_mut(lang), self.parsers.get_mut(lang)) {
@@ -166,117 +134,56 @@ impl HybridPiiProcessor {
                 let word_ids_arr = Array2::from_shape_vec((1, seq_len), word_ids)?;
                 let pre_ids: Vec<i64> = tokens.iter().map(|&w| tagger.vocab.get_pre_id(w)).collect();
                 let pre_ids_arr = Array2::from_shape_vec((1, seq_len), pre_ids)?;
-
-                let pos_outputs = tagger.session.run(ort::inputs![
-                    "word" => Value::from_array(word_ids_arr.clone())?,
-                    "pre" => Value::from_array(pre_ids_arr.clone())?,
-                ])?;
-
+                let pos_outputs = tagger.session.run(ort::inputs!["word" => Value::from_array(word_ids_arr.clone())?, "pre" => Value::from_array(pre_ids_arr.clone())?])?;
                 let upos_logits = pos_outputs.get("upos").ok_or("upos not found")?;
                 let (u_shape, u_data) = upos_logits.try_extract_tensor::<f32>()?;
                 let upos_dim = u_shape[2] as usize;
-
                 let upos_indices: Vec<i64> = (0..seq_len).map(|i| {
-                    let mut max_idx = 0;
-                    let mut max_val = f32::MIN;
-                    for j in 0..upos_dim {
-                        let val = u_data[i * upos_dim + j];
-                        if val > max_val { max_val = val; max_idx = j; }
-                    }
+                    let mut max_idx = 0; let mut max_val = f32::MIN;
+                    for j in 0..upos_dim { let val = u_data[i * upos_dim + j]; if val > max_val { max_val = val; max_idx = j; } }
                     max_idx as i64
                 }).collect();
-                let upos_arr = Array2::from_shape_vec((1, seq_len), upos_indices)?;
-                // FIX: Use zeros for lemma to avoid out-of-bounds in arc embedding if it expects specific lemma IDs
-                let lemma_arr = Array2::from_elem((1, seq_len), 0i64);
-
-                let dep_outputs = parser.session.run(ort::inputs![
-                    "word" => Value::from_array(word_ids_arr)?,
-                    "upos" => Value::from_array(upos_arr)?,
-                    "pre" => Value::from_array(pre_ids_arr)?,
-                    "lemma" => Value::from_array(lemma_arr)?,
-                ])?;
-
+                let dep_outputs = parser.session.run(ort::inputs!["word" => Value::from_array(word_ids_arr)?, "upos" => Value::from_array(Array2::from_shape_vec((1, seq_len), upos_indices)?)?, "pre" => Value::from_array(pre_ids_arr)?, "lemma" => Value::from_array(Array2::from_elem((1, seq_len), 0i64))?])?;
                 let deprel_logits = dep_outputs.get("deprel").ok_or("deprel not found")?;
                 let (d_shape, d_data) = deprel_logits.try_extract_tensor::<f32>()?;
                 let deprel_dim = d_shape[2] as usize;
 
                 for i in 0..seq_len {
-                    let mut max_u_idx = 0;
-                    let mut max_u_val = f32::MIN;
-                    for j in 0..upos_dim {
-                        let val = u_data[i * upos_dim + j];
-                        if val > max_u_val { max_u_val = val; max_u_idx = j; }
-                    }
+                    let mut max_u_idx = 0; let mut max_u_val = f32::MIN;
+                    for j in 0..upos_dim { let val = u_data[i * upos_dim + j]; if val > max_u_val { max_u_val = val; max_u_idx = j; } }
                     let upos = tagger.vocab.get_upos(max_u_idx);
-
-                    let mut max_d_idx = 0;
-                    let mut max_d_val = f32::MIN;
-                    for j in 0..deprel_dim {
-                        let val = d_data[i * deprel_dim + j];
-                        if val > max_d_val { max_d_val = val; max_d_idx = j; }
-                    }
+                    let mut max_d_idx = 0; let mut max_d_val = f32::MIN;
+                    for j in 0..deprel_dim { let val = d_data[i * deprel_dim + j]; if val > max_d_val { max_d_val = val; max_d_idx = j; } }
                     let deprel = parser.vocab.get_deprel(max_d_idx);
-
-                    stanza_results.push(StanzaResult {
-                        text: tokens[i].to_string(),
-                        upos,
-                        head: 0,
-                        deprel,
-                    });
+                    stanza_results.push(StanzaResult { text: tokens[i].to_string(), upos, head: 0, deprel });
                 }
             }
         }
 
-        let masked_text = self.scanner.apply_tiered_masking(text, &stanza_results, lang);
-        
-        let mut entities = Vec::new();
-        if masked_text != text {
-            entities.push(PiiEntity {
-                word: "Detected PII Block".to_string(),
-                entity_type: format!("{}_PII", lang.to_uppercase()),
-            });
-        }
+        let found_entities = self.scanner.scan_entities(text, &stanza_results, lang);
+        let masked_text = self.scanner.apply_masking(text, &found_entities);
+        let entities = found_entities.into_iter().map(|(w, t)| PiiEntity { word: w, entity_type: t }).collect();
 
-        Ok(PiiReport {
-            masked_text,
-            language_info: format!("Lang: {}", lang),
-            entities,
-            status: "PII Tiered Processing Complete".to_string(),
-        })
+        Ok(PiiReport { masked_text, language_info: format!("Lang: {}", lang), entities, status: "PII Tiered Processing Complete".to_string() })
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Initializing Hybrid PII Processor...");
     let mut processor = HybridPiiProcessor::new();
     let input_dir = "../pii/test_docs";
     let output_dir = "test_results_json";
     fs::create_dir_all(output_dir)?;
-
     for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
         let file_name = entry.file_name().into_string().unwrap();
         if file_name.ends_with(".txt") {
-            let lang = if file_name.starts_with("ko_") { "ko" } 
-                       else if file_name.starts_with("ja_") { "ja" }
-                       else if file_name.starts_with("zh_") { "zh-hans" }
-                       else { "en" };
-            
-            println!("📄 Reading: {}", file_name);
+            let lang = if file_name.starts_with("ko_") { "ko" } else if file_name.starts_with("ja_") { "ja" } else if file_name.starts_with("zh_") { "zh-hans" } else { "en" };
             let mut content = String::new();
             File::open(entry.path())?.read_to_string(&mut content)?;
-            
-            match processor.process(&content, lang) {
-                Ok(report) => {
-                    let out_path = Path::new(output_dir).join(format!("masked_{}.json", file_name));
-                    println!("  💾 Saving result to: {:?}", out_path);
-                    let mut out = File::create(out_path)?;
-                    let json = serde_json::to_string_pretty(&report)?;
-                    out.write_all(json.as_bytes())?;
-                },
-                Err(e) => {
-                    println!("  ❌ Error processing {}: {}", file_name, e);
-                }
+            if let Ok(report) = processor.process(&content, lang) {
+                let out_path = Path::new(output_dir).join(format!("masked_{}.json", file_name));
+                let mut out = File::create(out_path)?;
+                out.write_all(serde_json::to_string_pretty(&report)?.as_bytes())?;
             }
         }
     }
