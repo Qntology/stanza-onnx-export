@@ -1,0 +1,23 @@
+{
+  "masked_text": "CONFIDENTIAL: STRATEGIC PARTNERSHIP AGREEMENT - EXTENDED\r\n\r\n1. IDENTITY & GOVERNMENT IDS\r\n- Name: Robert J. Harrison\r\n- SSN: 666-00-1234\r\n- Passport No: *********\r\n- Driver's License: B1234567\r\n\r\n2. CONTACT DETAILS\r\n- Email: *******************************\r\n- Phone: +1-************\r\n- Address: 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA\r\n\r\n3. LOGISTICS & DELIVERY\r\n- Tracking Number: 1Z999AA10123456784 (UPS)\r\n- Gate Code: #7788\r\n- Delivery Note: \"Please leave at the back door. The security code for the side entrance is 1992.\"\r\n\r\n4. FINANCIAL DATA\r\n- Bank Account: ********** (JP Morgan Chase)\r\n- IBAN: US12 CHASE 0000 9876 5432 10\r\n- Credit Card: 4532-7812-3456-7890\r\n- SWIFT/BIC: CHASEUS33\r\n\r\n5. DIGITAL IDENTIFIERS\r\n- Server IP: 172.16.254.1\r\n- MAC Address: 00:0a:95:9d:68:16\r\n- Device Identifier: IMEI-355224050123456\r\n\r\nSincerely,\r\nJune 16, 2026\r\n",
+  "language_info": "Lang: en",
+  "entities": [
+    {
+      "word": "r.harrison@global-tech-corp.com",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "202-555-0178",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "9876543210",
+      "type": "EN_PHONE"
+    },
+    {
+      "word": "123456789",
+      "type": "EN_PHONE"
+    }
+  ],
+  "status": "PII Tiered Processing Complete (Granite Integrated)"
+}

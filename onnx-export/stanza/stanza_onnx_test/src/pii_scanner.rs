@@ -56,30 +56,46 @@ impl PiiScanner {
         let mut i = 0;
         while i < stanza.len() {
             let res = &stanza[i];
-            let is_cand = res.upos == "PROPN" || self.is_address_part(&res.text, lang);
+            let is_cand = res.upos == "PROPN" || res.upos == "NOUN" || self.is_address_part(&res.text, lang);
 
             if is_cand {
                 let mut combined = res.text.clone();
                 let mut j = i + 1;
+                let mut has_address_keyword = self.is_address_part(&combined, lang);
+
                 while j < stanza.len() {
                     let next = &stanza[j];
-                    // More conservative merging
-                    let should_merge = (next.deprel == "flat" || next.deprel == "compound" || next.deprel == "flat:name")
-                                    && (next.upos == "PROPN" || next.upos == "NOUN" || next.upos == "NUM" || self.is_address_part(&next.text, lang));
+                    let is_next_addr_part = self.is_address_part(&next.text, lang);
                     
+                    // 주소 병합 로직 완화: 현재까지 결합된 단어가 주소 키워드를 포함하거나, 다음 단어가 주소/명사/숫자/고유명사일 때 적극적으로 병합
+                    let is_semantic_merge = next.upos == "PROPN" || next.upos == "NOUN" || next.upos == "NUM" || is_next_addr_part;
+                    let is_deprel_merge = next.deprel == "flat" || next.deprel == "compound" || next.deprel == "flat:name" || next.deprel == "nummod" || next.deprel == "appos";
+                    
+                    let should_merge = is_semantic_merge && (has_address_keyword || is_deprel_merge || is_next_addr_part);
+
+                    println!("    [Log] Evaluating merge: '{}' + '{}' | UPOS: {}, DEPREL: {} | Merge: {}", combined, next.text, next.upos, next.deprel, should_merge);
+
                     if should_merge {
                         // Try with space first, then without
                         let with_space = format!("{} {}", combined, next.text);
                         let no_space = format!("{}{}", combined, next.text);
-                        if text.contains(&with_space) { combined = with_space; }
-                        else if text.contains(&no_space) { combined = no_space; }
-                        else { break; }
+                        if text.contains(&with_space) { 
+                            combined = with_space; 
+                        } else if text.contains(&no_space) { 
+                            combined = no_space; 
+                        } else { 
+                            break; 
+                        }
+                        if is_next_addr_part { has_address_keyword = true; }
                         j += 1;
-                    } else { break; }
+                    } else { 
+                        break; 
+                    }
                 }
                 
                 if combined.chars().count() >= 2 {
-                    let ent_type = if self.is_address_part(&combined, lang) { "ADDRESS" } else { "PROPN" };
+                    let ent_type = if has_address_keyword { "ADDRESS" } else { "PROPN" };
+                    println!("    [Log] Entity Found: {} [{}]", combined, ent_type);
                     entities.push((combined, format!("{}_{}", tag_prefix, ent_type)));
                 }
                 i = j;

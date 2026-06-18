@@ -1,0 +1,15 @@
+{
+  "masked_text": "Dear Team,\r\n\r\nThis is a formal report regarding the upcoming project in London. Our primary contact person is Mr. Jonathan Wick, who can be reached at *****************************. He currently resides at 100 Continental Way, London, UK. \r\n\r\nThe project involves several stakeholders, including the Mayor of London and local community leaders. We also need to coordinate with the security firm headed by Marcus Wright (Phone: +44 ************).\r\n\r\nPlease ensure all documents are sent to the official address:\r\nContinental Hotel\r\n100 Continental Way\r\nLondon, SE1 9PG\r\nUnited Kingdom\r\n\r\nBest regards,\r\nWinston Scott\r\nManager\r\n",
+  "language_info": "Lang: en",
+  "entities": [
+    {
+      "word": "jonathan.wick@continental.com",
+      "type": "EN_EMAIL"
+    },
+    {
+      "word": "20 7946 0958",
+      "type": "EN_PHONE"
+    }
+  ],
+  "status": "PII Tiered Processing Complete (Granite Integrated)"
+}

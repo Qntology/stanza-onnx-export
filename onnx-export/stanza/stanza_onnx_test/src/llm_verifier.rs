@@ -1,18 +1,14 @@
 use crate::model::GraniteModel;
-use crate::generate::Generator;
 
 pub struct PiiVerifier<'a> {
-    generator: Generator<'a>,
+    model: &'a mut GraniteModel,
 }
 
 impl<'a> PiiVerifier<'a> {
     pub fn new(model: &'a mut GraniteModel) -> Self {
-        Self {
-            generator: Generator::new(model),
-        }
+        Self { model }
     }
 
-    /// LLM에게 해당 단어가 특정 문맥에서 PII인지 물어봅니다.
     pub fn verify(&mut self, word: &str, context: &str) -> bool {
         let prompt = format!(
             "<|start_of_role|>system<|end_of_role|>Task: PII Verification\n\
@@ -24,17 +20,21 @@ impl<'a> PiiVerifier<'a> {
             context, word, word
         );
 
-        // Simple mock-up: In a real scenario, you'd tokenize and pass to the model.
-        // Since we don't have the actual LLM weights loaded in this test environment,
-        // we'll implement the logic that *would* call the model.
+        println!("    [Log] LLM Verifier called. Validating '{}'...", word);
         
-        // For demonstration, let's assume the LLM is called here.
-        // let response = self.generator.generate(prompt_ids, 5);
-        
-        true // Default to true for safety
+        match self.model.generate_text(&prompt, 5) {
+            Ok(response) => {
+                let answer = response.trim().to_uppercase();
+                println!("    [Log] Granite LLM Answered: {}", answer);
+                return answer.contains("YES");
+            },
+            Err(e) => {
+                println!("    [Error] LLM Verification failed: {}. Defaulting to true.", e);
+            }
+        }
+        true
     }
 
-    /// LLM에게 엔티티의 타입을 분류해달라고 요청합니다.
     pub fn classify(&mut self, word: &str, context: &str) -> String {
         let prompt = format!(
             "<|start_of_role|>system<|end_of_role|>Task: PII Classification\n\
@@ -45,7 +45,13 @@ impl<'a> PiiVerifier<'a> {
             context, word
         );
 
-        // This would return the classification from Granite
-        "PERSON".to_string() 
+        match self.model.generate_text(&prompt, 10) {
+            Ok(response) => {
+                let answer = response.trim().to_uppercase();
+                println!("    [Log] Granite LLM Classified as: {}", answer);
+                return answer;
+            },
+            Err(_) => return "PERSON".to_string(),
+        }
     }
 }

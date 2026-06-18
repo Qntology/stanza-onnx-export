@@ -2,3 +2,6 @@
 *.onnx
 *.pt
 *.zip
+
+/target
+target/
