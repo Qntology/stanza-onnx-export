@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import json
-import inspect
 from torch.nn.utils.rnn import PackedSequence
 
 # Extreme limits
@@ -57,11 +56,11 @@ def convert_lang(lang):
         try:
             print("  📦 Tokenizer...")
             m = nlp.processors['tokenize'].trainer.model.cpu().eval()
-            # Stanza Tokenizer uses m.rnn.input_size
             in_size = m.rnn.input_size
             num_feats = in_size - 32
             inputs = (torch.zeros(1, 100).long(), torch.zeros(1, 100, num_feats).float(), torch.tensor([100]).long())
-            torch.onnx.export(m, inputs, f"{ONNX_DIR}/{lang}_tokenizer.onnx", opset_version=14, input_names=['x','f','l'], output_names=['output'])
+            torch.onnx.export(m, inputs, f"{ONNX_DIR}/{lang}_tokenizer.onnx", opset_version=14, 
+                             input_names=['x','f','l'], output_names=['output'])
             print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
@@ -84,8 +83,14 @@ def convert_lang(lang):
                         ins.append(torch.zeros(word.size(0), word.size(1), self.m.args['transformed_dim']))
                     lstm_out, _ = self.m.taggerlstm(torch.cat(ins, 2), slen, hx=(self.m.taggerlstm_h_init.expand(-1, word.size(0), -1).contiguous(), self.m.taggerlstm_c_init.expand(-1, word.size(0), -1).contiguous()))
                     return self.m.upos_clf(F.relu(self.m.upos_hid(lstm_out)))
-            inputs = (torch.randint(1, 10, (1, 8)), torch.ones((1, 8), dtype=torch.bool), torch.zeros(8, 32).long(), torch.ones(8, 32).bool(), torch.randint(1, 10, (1, 8)), torch.arange(8), torch.tensor([8]), torch.full((8,), 5))
-            torch.onnx.export(POSWrapper(m), inputs, f"{ONNX_DIR}/{lang}_pos.onnx", opset_version=14, output_names=['upos'])
+            
+            inputs = (torch.randint(1, 10, (1, 8)), torch.ones((1, 8), dtype=torch.bool), 
+                      torch.zeros(8, 32).long(), torch.ones(8, 32).bool(), 
+                      torch.randint(1, 10, (1, 8)), torch.arange(8), torch.tensor([8]), torch.full((8,), 5))
+            
+            torch.onnx.export(POSWrapper(m), inputs, f"{ONNX_DIR}/{lang}_pos.onnx", opset_version=14,
+                             input_names=['word','mask','chars','chars_mask','pre','oidx','slen','wlen'],
+                             output_names=['upos'])
             print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
@@ -97,18 +102,17 @@ def convert_lang(lang):
             patch_model_recursively(m)
             class DepWrapper(nn.Module):
                 def __init__(self, m): super().__init__(); self.m = m
-                def forward(self, word, mask, chars, chars_mask, upos, pre, lemma, slen):
+                def forward(self, word, mask, upos, pre, lemma, slen):
                     ins = []
                     if self.m.args['pretrain']: ins.append(self.m.trans_pretrained(self.m.pretrained_emb(pre)))
                     if self.m.args['word_emb_dim'] > 0:
                         ins.append(self.m.word_emb(word))
                         ins.append(self.m.lemma_emb(lemma))
                     if self.m.args['tag_emb_dim'] > 0:
-                        # Add ALL tags required
                         p_emb = self.m.upos_emb(upos)
                         if hasattr(self.m, 'xpos_emb'):
                             if isinstance(self.m.xpos_emb, nn.ModuleList):
-                                for l in self.m.xpos_emb: p_emb = p_emb + l(upos) # Dummy
+                                for l in self.m.xpos_emb: p_emb = p_emb + l(upos)
                             else: p_emb = p_emb + self.m.xpos_emb(upos)
                         ins.append(p_emb)
                     if hasattr(self.m, 'charmodel_forward'):
@@ -116,20 +120,26 @@ def convert_lang(lang):
                     elif hasattr(self.m, 'charmodel'):
                         ins.append(torch.zeros(word.size(0), word.size(1), self.m.args['transformed_dim']))
                     
-                    # Ensure total matches m.parserlstm.input_size
                     curr = torch.cat(ins, 2)
                     if curr.size(-1) < self.m.parserlstm.input_size:
                         curr = torch.cat([curr, torch.zeros(curr.size(0), curr.size(1), self.m.parserlstm.input_size - curr.size(-1))], 2)
                     
                     lstm_out, _ = self.m.parserlstm(curr, slen, hx=(self.m.parserlstm_h_init.expand(-1, word.size(0), -1).contiguous(), self.m.parserlstm_c_init.expand(-1, word.size(0), -1).contiguous()))
-                    if hasattr(self.m, 'unlabeled'): return self.m.unlabeled(lstm_out, lstm_out).squeeze(3), self.m.deprel(lstm_out, lstm_out)
+                    if hasattr(self.m, 'unlabeled'): 
+                        return self.m.unlabeled(lstm_out, lstm_out).squeeze(3), self.m.deprel(lstm_out, lstm_out)
                     arc = self.m.arc_embedding(lstm_out, lstm_out)
                     return self.m.unlabeled_linear(arc).squeeze(3), self.m.deprel_linear(arc)
-            inputs = (torch.randint(1, 10, (1, 9)), torch.ones((1, 9), dtype=torch.bool), torch.zeros(9, 32).long(), torch.ones(9, 32).bool(), torch.zeros(1, 9).long(), torch.randint(1, 10, (1, 9)), torch.randint(1, 10, (1, 9)), torch.tensor([9]))
-            torch.onnx.export(DepWrapper(m), inputs, f"{ONNX_DIR}/{lang}_depparse.onnx", opset_version=14, output_names=['unlabeled','deprel'])
+            
+            inputs = (torch.randint(1, 10, (1, 9)), torch.ones((1, 9), dtype=torch.bool), 
+                      torch.zeros(1, 9).long(), torch.randint(1, 10, (1, 9)), 
+                      torch.randint(1, 10, (1, 9)), torch.tensor([9]))
+            
+            torch.onnx.export(DepWrapper(m), inputs, f"{ONNX_DIR}/{lang}_depparse.onnx", opset_version=14,
+                             input_names=['word','mask','upos','pre','lemma','slen'],
+                             output_names=['unlabeled','deprel'])
             print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
 if __name__ == "__main__":
     apply_global_patches()
-    for l in ['sq', 'ar', 'bg', 'ca', 'zh-hans', 'hr', 'cs', 'da', 'nl', 'en', 'et', 'fi', 'fr', 'ka', 'de', 'el', 'he', 'hi', 'hu', 'is', 'id', 'it', 'ja', 'kk', 'ko', 'lv', 'lt', 'mr', 'no', 'fa', 'pl', 'pt', 'ro', 'ru', 'sr', 'sk', 'sl', 'es', 'sv', 'te', 'th', 'tr', 'uk', 'ur', 'uz', 'vi']: convert_lang(l)
+    for l in ['en', 'de', 'es', 'fr', 'ja', 'pt', 'ar', 'cs', 'it', 'ko', 'nl', 'zh-hans']: convert_lang(l)
