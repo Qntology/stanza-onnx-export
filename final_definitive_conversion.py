@@ -35,16 +35,17 @@ def apply_global_patches():
         for l in range(self.num_layers):
             if self.dropout > 0 and l > 0: input = self.drop(input)
             layer_hx = (hx[0][l * self.num_directions:(l+1)*self.num_directions], hx[1][l * self.num_directions:(l+1)*self.num_directions]) if hx is not None else None
+            if torch.jit.is_tracing(): layer_hx = None
             h, (ht, ct) = self.lstm[l].lstm(input, layer_hx)
             hs.append(ht); cs.append(ct)
             input = h + torch.sigmoid(self.gate[l](input)) * (self.highway[l](input) if self.highway_func is None else self.highway_func(self.highway[l](input)))
         return input, (torch.cat(hs, 0), torch.cat(cs, 0))
     hlstm.HighwayLSTM.forward = hlstm_forward
-    packed_lstm.PackedLSTM.forward = lambda self, input, lengths, hx=None: self.lstm(input, hx)
+    packed_lstm.PackedLSTM.forward = lambda self, input, lengths, hx=None: self.lstm(input, None if torch.jit.is_tracing() else hx)
 
 # --- 2. EXPORT ---
 
-import stanza
+# import stanza  <-- 지우거나 주석 처리하세요!
 
 def convert_lang(lang):
     # 언어별 하위 폴더 생성으로 경로 재지정
@@ -92,12 +93,31 @@ def convert_lang(lang):
                     ins = []
                     if self.m.args['word_emb_dim'] > 0: ins.append(self.m.word_emb(word))
                     if self.m.args['pretrain']: ins.append(self.m.trans_pretrained(self.m.pretrained_emb(pre)))
+                    
+                    def process_char(c_out):
+                        c = c_out[0] if isinstance(c_out, tuple) else c_out
+                        if c.dim() == 3:
+                            if c.size(0) == chars.size(1) and c.size(1) == chars.size(0):
+                                idx = (wlen - 1).clamp(min=0).unsqueeze(0).unsqueeze(2).expand(1, c.size(1), c.size(2))
+                                c = c.gather(0, idx).squeeze(0)
+                            elif c.size(1) == chars.size(1) and c.size(0) == chars.size(0):
+                                idx = (wlen - 1).clamp(min=0).unsqueeze(1).unsqueeze(2).expand(-1, 1, c.size(2))
+                                c = c.gather(1, idx).squeeze(1)
+                        return c.reshape(word.size(0), word.size(1), -1)
+
                     if hasattr(self.m, 'charmodel_forward'):
-                        ins.append(torch.zeros(word.size(0), word.size(1), self.m.charmodel_forward.hidden_dim()))
-                        ins.append(torch.zeros(word.size(0), word.size(1), self.m.charmodel_backward.hidden_dim()))
+                        cf = self.m.charmodel_forward(chars, chars_mask, wlen)
+                        cb = self.m.charmodel_backward(chars, chars_mask, wlen)
+                        ins.append(process_char(cf))
+                        ins.append(process_char(cb))
                     elif hasattr(self.m, 'charmodel'):
-                        ins.append(torch.zeros(word.size(0), word.size(1), self.m.args['transformed_dim']))
-                    lstm_out, _ = self.m.taggerlstm(torch.cat(ins, 2), slen, hx=(self.m.taggerlstm_h_init.expand(-1, word.size(0), -1).contiguous(), self.m.taggerlstm_c_init.expand(-1, word.size(0), -1).contiguous()))
+                        try:
+                            cm = self.m.charmodel(chars, chars_mask, wordlens=wlen, sentlens=slen)
+                        except TypeError:
+                            cm = self.m.charmodel(chars, chars_mask, wlen)
+                        ins.append(process_char(cm))
+                        
+                    lstm_out, _ = self.m.taggerlstm(torch.cat(ins, 2), slen)
                     return self.m.upos_clf(F.relu(self.m.upos_hid(lstm_out)))
             
             inputs = (torch.randint(1, 10, (1, 8)), torch.ones((1, 8), dtype=torch.bool), 
@@ -124,7 +144,7 @@ def convert_lang(lang):
             patch_model_recursively(m)
             class DepWrapper(nn.Module):
                 def __init__(self, m): super().__init__(); self.m = m
-                def forward(self, word, mask, upos, pre, lemma, slen):
+                def forward(self, word, mask, chars, chars_mask, upos, pre, lemma, slen, wlen):
                     ins = []
                     if self.m.args['pretrain']: ins.append(self.m.trans_pretrained(self.m.pretrained_emb(pre)))
                     if self.m.args['word_emb_dim'] > 0:
@@ -137,34 +157,53 @@ def convert_lang(lang):
                                 for l in self.m.xpos_emb: p_emb = p_emb + l(upos)
                             else: p_emb = p_emb + self.m.xpos_emb(upos)
                         ins.append(p_emb)
+                        
+                    def process_char(c_out):
+                        c = c_out[0] if isinstance(c_out, tuple) else c_out
+                        if c.dim() == 3:
+                            if c.size(0) == chars.size(1) and c.size(1) == chars.size(0):
+                                idx = (wlen - 1).clamp(min=0).unsqueeze(0).unsqueeze(2).expand(1, c.size(1), c.size(2))
+                                c = c.gather(0, idx).squeeze(0)
+                            elif c.size(1) == chars.size(1) and c.size(0) == chars.size(0):
+                                idx = (wlen - 1).clamp(min=0).unsqueeze(1).unsqueeze(2).expand(-1, 1, c.size(2))
+                                c = c.gather(1, idx).squeeze(1)
+                        return c.reshape(word.size(0), word.size(1), -1)
+
                     if hasattr(self.m, 'charmodel_forward'):
-                        ins.append(torch.zeros(word.size(0), word.size(1), self.m.charmodel_forward.hidden_dim() + self.m.charmodel_backward.hidden_dim()))
+                        cf = self.m.charmodel_forward(chars, chars_mask, wlen)
+                        cb = self.m.charmodel_backward(chars, chars_mask, wlen)
+                        ins.append(torch.cat([process_char(cf), process_char(cb)], dim=2))
                     elif hasattr(self.m, 'charmodel'):
-                        ins.append(torch.zeros(word.size(0), word.size(1), self.m.args['transformed_dim']))
+                        try:
+                            cm = self.m.charmodel(chars, chars_mask, wordlens=wlen, sentlens=slen)
+                        except TypeError:
+                            cm = self.m.charmodel(chars, chars_mask, wlen)
+                        ins.append(process_char(cm))
                     
                     curr = torch.cat(ins, 2)
                     if curr.size(-1) < self.m.parserlstm.input_size:
                         curr = torch.cat([curr, torch.zeros(curr.size(0), curr.size(1), self.m.parserlstm.input_size - curr.size(-1))], 2)
                     
-                    lstm_out, _ = self.m.parserlstm(curr, slen, hx=(self.m.parserlstm_h_init.expand(-1, word.size(0), -1).contiguous(), self.m.parserlstm_c_init.expand(-1, word.size(0), -1).contiguous()))
+                    lstm_out, _ = self.m.parserlstm(curr, slen)
                     if hasattr(self.m, 'unlabeled'): 
                         return self.m.unlabeled(lstm_out, lstm_out).squeeze(3), self.m.deprel(lstm_out, lstm_out)
                     arc = self.m.arc_embedding(lstm_out, lstm_out)
                     return self.m.unlabeled_linear(arc).squeeze(3), self.m.deprel_linear(arc)
             
             inputs = (torch.randint(1, 10, (1, 9)), torch.ones((1, 9), dtype=torch.bool), 
+                      torch.zeros(9, 32).long(), torch.ones(9, 32).bool(),
                       torch.zeros(1, 9).long(), torch.randint(1, 10, (1, 9)), 
-                      torch.randint(1, 10, (1, 9)), torch.tensor([9]))
+                      torch.randint(1, 10, (1, 9)), torch.tensor([9]), torch.full((9,), 5))
             
             # 모델 구성 및 텐서 값 확인을 위한 로그
             print(f"    [LOG] Depparse 모델 구성: parserlstm.input_size={m.parserlstm.input_size}, tag_emb_dim={m.args['tag_emb_dim']}")
-            print(f"    [LOG] Depparse 입력 텐서 Shape: word={inputs[0].shape}, mask={inputs[1].shape}, upos={inputs[2].shape}, pre={inputs[3].shape}, lemma={inputs[4].shape}, slen={inputs[5].shape}")
+            print(f"    [LOG] Depparse 입력 텐서 Shape: word={inputs[0].shape}, mask={inputs[1].shape}, chars={inputs[2].shape}, chars_mask={inputs[3].shape}, upos={inputs[4].shape}, pre={inputs[5].shape}, lemma={inputs[6].shape}, slen={inputs[7].shape}, wlen={inputs[8].shape}")
             
             # 파일 경로를 변경된 폴더 구조에 맞게 수정
             torch.onnx.export(DepWrapper(m), inputs, f"{ONNX_DIR}/depparse.onnx", opset_version=14,
-                             input_names=['word','mask','upos','pre','lemma','slen'],
+                             input_names=['word','mask','chars','chars_mask','upos','pre','lemma','slen','wlen'],
                              output_names=['unlabeled','deprel'],
-                             dynamic_axes={'word': {1: 'seq'}, 'mask': {1: 'seq'}, 'upos': {1: 'seq'}, 'pre': {1: 'seq'}, 'lemma': {1: 'seq'}, 'unlabeled': {1: 'seq', 2: 'seq'}, 'deprel': {1: 'seq', 2: 'seq'}})
+                             dynamic_axes={'word': {1: 'seq'}, 'mask': {1: 'seq'}, 'chars': {0: 'seq'}, 'chars_mask': {0: 'seq'}, 'upos': {1: 'seq'}, 'pre': {1: 'seq'}, 'lemma': {1: 'seq'}, 'unlabeled': {1: 'seq', 2: 'seq'}, 'deprel': {1: 'seq', 2: 'seq'}, 'wlen': {0: 'seq'}})
             print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
@@ -197,5 +236,12 @@ def convert_lang(lang):
         print(f"    ❌ {e}")
 
 if __name__ == "__main__":
+    # 1. 패치를 최우선으로 적용하여 PyTorch 내부 함수를 덮어씌웁니다.
     apply_global_patches()
-    for l in ['en', 'de', 'es', 'fr', 'ja', 'pt', 'ar', 'cs', 'it', 'ko', 'nl', 'zh-hans']: convert_lang(l)
+    
+    # 2. 패치가 완료된 후 stanza를 임포트해야 패치된 함수를 가져다 씁니다.
+    import stanza 
+    
+    # 3. 변환 작업을 시작합니다.
+    for l in ['en', 'de', 'es', 'fr', 'ja', 'pt', 'ar', 'cs', 'it', 'ko', 'nl', 'zh-hans']: 
+        convert_lang(l)
