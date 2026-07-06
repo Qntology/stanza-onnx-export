@@ -52,8 +52,13 @@ def convert_lang(lang):
     os.makedirs(ONNX_DIR, exist_ok=True)
     
     print(f"\n🚀 {lang}")
-    try: nlp = stanza.Pipeline(lang, processors='tokenize,pos,lemma,depparse', download_method=None)
-    except: return
+    try: 
+        print(f"  ⬇️ Downloading from: https://huggingface.co/stanfordnlp/stanza-{lang}/tree/main/models")
+        stanza.download(lang, processors='tokenize,pos,lemma,depparse')
+        nlp = stanza.Pipeline(lang, processors='tokenize,pos,lemma,depparse')
+    except Exception as e:
+        print(f"    ❌ {e}")
+        return
 
     # A. TOKENIZER
     if 'tokenize' in nlp.processors:
