@@ -122,16 +122,27 @@ def convert_lang(lang):
                                 c = c.gather(1, idx).squeeze(1)
                         return c.reshape(word.size(0), word.size(1), -1)
 
+                    def get_charmodel_out(model, c, c_m, w, s, o):
+                        import inspect
+                        p = inspect.signature(model.forward).parameters
+                        kw = {}
+                        if len(p) > 0:
+                            first_param = list(p.keys())[0]
+                            kw[first_param] = c
+                        if 'chars_mask' in p: kw['chars_mask'] = c_m
+                        if 'wordlens' in p: kw['wordlens'] = w
+                        if 'charlens' in p: kw['charlens'] = w
+                        if 'sentlens' in p: kw['sentlens'] = s
+                        if 'word_orig_idx' in p: kw['word_orig_idx'] = o
+                        return model(**kw)
+
                     if hasattr(self.m, 'charmodel_forward'):
-                        cf = self.m.charmodel_forward(chars, chars_mask, wlen)
-                        cb = self.m.charmodel_backward(chars, chars_mask, wlen)
+                        cf = get_charmodel_out(self.m.charmodel_forward, chars, chars_mask, wlen, slen, oidx)
+                        cb = get_charmodel_out(self.m.charmodel_backward, chars, chars_mask, wlen, slen, oidx)
                         ins.append(process_char(cf))
                         ins.append(process_char(cb))
                     elif hasattr(self.m, 'charmodel'):
-                        try:
-                            cm = self.m.charmodel(chars, chars_mask, wordlens=wlen, sentlens=slen)
-                        except TypeError:
-                            cm = self.m.charmodel(chars, chars_mask, wlen)
+                        cm = get_charmodel_out(self.m.charmodel, chars, chars_mask, wlen, slen, oidx)
                         ins.append(process_char(cm))
                         
                     lstm_out, _ = self.m.taggerlstm(torch.cat(ins, 2), slen)
@@ -186,15 +197,26 @@ def convert_lang(lang):
                                 c = c.gather(1, idx).squeeze(1)
                         return c.reshape(word.size(0), word.size(1), -1)
 
+                    def get_charmodel_out(model, c, c_m, w, s):
+                        import inspect
+                        p = inspect.signature(model.forward).parameters
+                        kw = {}
+                        if len(p) > 0:
+                            first_param = list(p.keys())[0]
+                            kw[first_param] = c
+                        if 'chars_mask' in p: kw['chars_mask'] = c_m
+                        if 'wordlens' in p: kw['wordlens'] = w
+                        if 'charlens' in p: kw['charlens'] = w
+                        if 'sentlens' in p: kw['sentlens'] = s
+                        if 'word_orig_idx' in p: kw['word_orig_idx'] = torch.arange(w.size(0), device=w.device)
+                        return model(**kw)
+
                     if hasattr(self.m, 'charmodel_forward'):
-                        cf = self.m.charmodel_forward(chars, chars_mask, wlen)
-                        cb = self.m.charmodel_backward(chars, chars_mask, wlen)
+                        cf = get_charmodel_out(self.m.charmodel_forward, chars, chars_mask, wlen, slen)
+                        cb = get_charmodel_out(self.m.charmodel_backward, chars, chars_mask, wlen, slen)
                         ins.append(torch.cat([process_char(cf), process_char(cb)], dim=2))
                     elif hasattr(self.m, 'charmodel'):
-                        try:
-                            cm = self.m.charmodel(chars, chars_mask, wordlens=wlen, sentlens=slen)
-                        except TypeError:
-                            cm = self.m.charmodel(chars, chars_mask, wlen)
+                        cm = get_charmodel_out(self.m.charmodel, chars, chars_mask, wlen, slen)
                         ins.append(process_char(cm))
                     
                     curr = torch.cat(ins, 2)
