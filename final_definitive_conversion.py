@@ -60,6 +60,69 @@ def apply_global_patches():
         return orig_attn_forward(self, dec_hidden, enc_outs, enc_masks)
     seq2seq_modules.DeepAttention.forward = patched_attn_forward
 
+    # CharacterModel 패치 추가: cs, ko 등 nocharlm에서 발생하는 batch_sizes 에러 및 정렬 로직 우회
+    import stanza.models.common.char_model as char_model
+    orig_char_forward = char_model.CharacterModel.forward
+    def patched_char_forward(self, chars, chars_mask, wordlens, word_orig_idx, sentlens):
+        if torch.jit.is_tracing():
+            chars_emb = self.char_emb(chars)
+            batch_size = chars.size(0)
+            
+            # 1. Stanza CharacterModel의 실제 기본 구조인 charlstm 지원 추가
+            if hasattr(self, 'charlstm'):
+                lstm_obj = self.charlstm.lstm if hasattr(self.charlstm, 'lstm') else self.charlstm
+                is_batch_first = getattr(lstm_obj, 'batch_first', True)
+                if not is_batch_first:
+                    chars_emb = chars_emb.transpose(0, 1)
+                
+                out, (h, _) = lstm_obj(chars_emb)
+                
+                if not is_batch_first:
+                    out = out.transpose(0, 1)
+                
+                if getattr(self, 'use_out', False):
+                    return out
+                
+                # 어텐션 메커니즘이 활성화되어 있는 경우의 연산 우회
+                if getattr(self, 'attn', False):
+                    weights = torch.sigmoid(self.char_attn(self.dropout(out)))
+                    return (out * weights).sum(1)
+                
+                # 일반적인 최종 상태(Final States) 반환 처리
+                if h.size(0) >= 2:
+                    return h[-2:].transpose(0, 1).contiguous().view(batch_size, -1)
+                return h[-1]
+                
+            # 2. 하위 호환성을 위한 기존 lstm 및 예외 처리 로직 유지
+            elif hasattr(self, 'lstm'):
+                lstm_obj = self.lstm
+                if not getattr(lstm_obj, 'batch_first', False):
+                    chars_emb = chars_emb.transpose(0, 1)
+                
+                out, (h, _) = lstm_obj(chars_emb)
+                
+                if not getattr(lstm_obj, 'batch_first', False):
+                    out = out.transpose(0, 1)
+                
+                if getattr(self, 'use_out', False):
+                    return out
+                
+                if h.size(0) >= 2:
+                    return torch.cat([h[-2], h[-1]], dim=-1)
+                return h[-1]
+            else:
+                f_lstm = self.forward_lstm.lstm if hasattr(self.forward_lstm, 'lstm') else self.forward_lstm
+                b_lstm = self.backward_lstm.lstm if hasattr(self.backward_lstm, 'lstm') else self.backward_lstm
+                
+                out_f, (h_f, _) = f_lstm(chars_emb)
+                out_b, (h_b, _) = b_lstm(chars_emb)
+                
+                if getattr(self, 'use_out', False):
+                    return torch.cat([out_f, out_b], dim=-1)
+                return torch.cat([h_f[0], h_b[0]], dim=-1)
+        return orig_char_forward(self, chars, chars_mask, wordlens, word_orig_idx, sentlens)
+    char_model.CharacterModel.forward = patched_char_forward
+
 # --- 2. EXPORT ---
 
 # import stanza  <-- 지우거나 주석 처리하세요!
@@ -136,14 +199,18 @@ def convert_lang(lang):
                         if 'word_orig_idx' in p: kw['word_orig_idx'] = o
                         return model(**kw)
 
-                    if hasattr(self.m, 'charmodel_forward'):
-                        cf = get_charmodel_out(self.m.charmodel_forward, chars, chars_mask, wlen, slen, oidx)
-                        cb = get_charmodel_out(self.m.charmodel_backward, chars, chars_mask, wlen, slen, oidx)
-                        ins.append(process_char(cf))
-                        ins.append(process_char(cb))
-                    elif hasattr(self.m, 'charmodel'):
-                        cm = get_charmodel_out(self.m.charmodel, chars, chars_mask, wlen, slen, oidx)
-                        ins.append(process_char(cm))
+                    base_dim = sum(x.size(2) for x in ins)
+                    expected_dim = self.m.taggerlstm.input_size
+                    if base_dim < expected_dim:
+                        if hasattr(self.m, 'charmodel_forward'):
+                            cf = get_charmodel_out(self.m.charmodel_forward, chars, chars_mask, wlen, slen, oidx)
+                            cb = get_charmodel_out(self.m.charmodel_backward, chars, chars_mask, wlen, slen, oidx)
+                            c_out = torch.cat([process_char(cf), process_char(cb)], dim=2)
+                            ins.append(c_out[:, :, :expected_dim - base_dim])
+                        elif hasattr(self.m, 'charmodel'):
+                            cm = get_charmodel_out(self.m.charmodel, chars, chars_mask, wlen, slen, oidx)
+                            c_out = process_char(cm)
+                            ins.append(c_out[:, :, :expected_dim - base_dim])
                         
                     lstm_out, _ = self.m.taggerlstm(torch.cat(ins, 2), slen)
                     return self.m.upos_clf(F.relu(self.m.upos_hid(lstm_out)))
@@ -211,13 +278,18 @@ def convert_lang(lang):
                         if 'word_orig_idx' in p: kw['word_orig_idx'] = torch.arange(w.size(0), device=w.device)
                         return model(**kw)
 
-                    if hasattr(self.m, 'charmodel_forward'):
-                        cf = get_charmodel_out(self.m.charmodel_forward, chars, chars_mask, wlen, slen)
-                        cb = get_charmodel_out(self.m.charmodel_backward, chars, chars_mask, wlen, slen)
-                        ins.append(torch.cat([process_char(cf), process_char(cb)], dim=2))
-                    elif hasattr(self.m, 'charmodel'):
-                        cm = get_charmodel_out(self.m.charmodel, chars, chars_mask, wlen, slen)
-                        ins.append(process_char(cm))
+                    base_dim = sum(x.size(2) for x in ins)
+                    expected_dim = self.m.parserlstm.input_size
+                    if base_dim < expected_dim:
+                        if hasattr(self.m, 'charmodel_forward'):
+                            cf = get_charmodel_out(self.m.charmodel_forward, chars, chars_mask, wlen, slen)
+                            cb = get_charmodel_out(self.m.charmodel_backward, chars, chars_mask, wlen, slen)
+                            c_out = torch.cat([process_char(cf), process_char(cb)], dim=2)
+                            ins.append(c_out[:, :, :expected_dim - base_dim])
+                        elif hasattr(self.m, 'charmodel'):
+                            cm = get_charmodel_out(self.m.charmodel, chars, chars_mask, wlen, slen)
+                            c_out = process_char(cm)
+                            ins.append(c_out[:, :, :expected_dim - base_dim])
                     
                     curr = torch.cat(ins, 2)
                     if curr.size(-1) < self.m.parserlstm.input_size:
@@ -317,5 +389,5 @@ if __name__ == "__main__":
     import stanza 
     
     # 3. 변환 작업을 시작합니다.
-    for l in ['en', 'de', 'es', 'fr', 'ja', 'pt', 'ar', 'cs', 'it', 'ko', 'nl', 'zh-hans']: 
+    for l in ['en', 'cs', 'ko', 'de', 'es', 'fr', 'ja', 'pt', 'ar', 'it', 'nl', 'zh-hans']: 
         convert_lang(l)
