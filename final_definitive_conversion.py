@@ -43,6 +43,23 @@ def apply_global_patches():
     hlstm.HighwayLSTM.forward = hlstm_forward
     packed_lstm.PackedLSTM.forward = lambda self, input, lengths, hx=None: self.lstm(input, None if torch.jit.is_tracing() else hx)
 
+    import stanza.models.common.seq2seq_model as seq2seq_model
+    import stanza.models.common.seq2seq_modules as seq2seq_modules
+
+    # seq2seq_model의 encode와 forward 패치는 Stanza 내부의 양방향(Bidirectional) 병합 로직 등을 훼손하여 
+    # 오히려 형변환 에러나 튜플 텐서 차원 에러를 유발하므로 제거했습니다.
+    # 발생하는 단순 TracerWarning은 전역 pack_padded_sequence 패치로 인해 실제 변환에 악영향을 주지 않습니다.
+
+    orig_attn_forward = seq2seq_modules.DeepAttention.forward
+    def patched_attn_forward(self, dec_hidden, enc_outs, enc_masks):
+        if torch.jit.is_tracing():
+            attn_scores = self.score(dec_hidden, enc_outs)
+            # ONNX 변환 시 in-place 연산(.data.masked_fill_)과 inf 값 처리를 안전하게 수행하도록 수정
+            attn_scores = attn_scores.masked_fill(enc_masks.bool(), -1e9)
+            return torch.nn.functional.softmax(attn_scores, dim=1)
+        return orig_attn_forward(self, dec_hidden, enc_outs, enc_masks)
+    seq2seq_modules.DeepAttention.forward = patched_attn_forward
+
 # --- 2. EXPORT ---
 
 # import stanza  <-- 지우거나 주석 처리하세요!
@@ -207,7 +224,42 @@ def convert_lang(lang):
             print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
-    # D. VOCAB EXTRACTION
+    # D. LEMMA
+    if 'lemma' in nlp.processors:
+        try:
+            print("  📦 Lemma...")
+            # 사전 기반(Dictionary-based) Lemmatizer인 경우 trainer.model이 없을 수 있으므로 체크
+            if hasattr(nlp.processors['lemma'], 'trainer') and hasattr(nlp.processors['lemma'].trainer, 'model'):
+                m = nlp.processors['lemma'].trainer.model.cpu().eval()
+                patch_model_recursively(m)
+                
+                class LemmaWrapper(nn.Module):
+                    def __init__(self, m): super().__init__(); self.m = m
+                    def forward(self, src, src_mask, tgt_in, pos):
+                        # Stanza의 Neural Lemmatizer (Seq2Seq) 기본 입력 포맷
+                        # 키워드 인자 매핑 오류를 피하기 위해 모든 인자를 순서대로(positional) 넘깁니다.
+                        return self.m(src, src_mask, tgt_in, pos)
+                
+                # 입력 텐서 더미: Seq2Seq 모델 구조에 맞게 tgt_in을 세 번째로 배치
+                src_dummy = torch.randint(1, 10, (1, 8))
+                src_mask_dummy = torch.zeros((1, 8), dtype=torch.bool)
+                tgt_in_dummy = torch.randint(1, 10, (1, 8))
+                pos_dummy = torch.randint(1, 10, (1,))
+                
+                inputs = (src_dummy, src_mask_dummy, tgt_in_dummy, pos_dummy)
+                
+                print(f"    [LOG] Lemma 입력 텐서 Shape: src={inputs[0].shape}, src_mask={inputs[1].shape}, tgt_in={inputs[2].shape}, pos={inputs[3].shape}")
+                
+                torch.onnx.export(LemmaWrapper(m), inputs, f"{ONNX_DIR}/lemma.onnx", opset_version=14,
+                                 input_names=['src','src_mask','tgt_in','pos'],
+                                 output_names=['preds'],
+                                 dynamic_axes={'src': {0: 'batch', 1: 'seq'}, 'src_mask': {0: 'batch', 1: 'seq'}, 'tgt_in': {0: 'batch', 1: 'seq'}, 'pos': {0: 'batch'}, 'preds': {0: 'batch', 1: 'seq'}})
+                print("    ✅ Done")
+            else:
+                print("    ⚠️ Rule-based/Dictionary Lemmatizer (No PyTorch model to export)")
+        except Exception as e: print(f"    ❌ {e}")
+
+    # E. VOCAB EXTRACTION
     try:
         print("  📦 Vocab Extraction...")
         vocab_data = {}
