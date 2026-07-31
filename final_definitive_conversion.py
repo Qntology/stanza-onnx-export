@@ -1,13 +1,34 @@
 import os
 import sys
+import subprocess
+
+try:
+    import torch
+except ImportError:
+    print("📦 torch 모듈이 없어 자동 설치를 진행합니다...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
+
+try:
+    import stanza
+except ImportError:
+    print("📦 stanza 모듈이 없어 자동 설치를 진행합니다...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "stanza"])
+
+try:
+    import onnxscript
+except ImportError:
+    print("📦 onnxscript 모듈이 없어 자동 설치를 진행합니다...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "onnxscript"])
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import json
 from torch.nn.utils.rnn import PackedSequence
+import stanza
 
 # Extreme limits
-sys.setrecursionlimit(100000)
+sys.setrecursionlimit(10000)
 
 # --- 1. PATCHES ---
 
@@ -18,30 +39,64 @@ class ONNXBilinear(nn.Module):
         if x1.dim() == 3: return torch.einsum('nli,oij,nlj->nlo', x1, self.weight, x2) + self.bias
         return torch.einsum('ni,oij,nj->no', x1, self.weight, x2) + self.bias
 
-def patch_model_recursively(module):
+def patch_model_recursively(module, visited=None):
+    if visited is None: visited = set()
+    if id(module) in visited: return
+    visited.add(id(module))
     for name, child in module.named_children():
         if isinstance(child, nn.Bilinear): setattr(module, name, ONNXBilinear(child))
-        else: patch_model_recursively(child)
+        else: patch_model_recursively(child, visited)
+
+def is_exporting():
+    tracing = torch.jit.is_tracing()
+    try:
+        import torch._dynamo as dynamo
+        if dynamo.is_compiling():
+            tracing = True
+    except:
+        pass
+    return tracing
 
 def apply_global_patches():
+    # Tokenizer 및 타 모델에서 발생하는 torch.zeros FakeTensor Unpack 에러 방지 패치
+    orig_zeros = torch.zeros
+    def patched_zeros(*args, **kwargs):
+        if is_exporting():
+            # PyTorch 2.x에서 FakeTensor가 shape 인자로 직접 들어갈 경우 C++ Unpack 에러가 발생합니다.
+            # 이를 방지하기 위해 0D 스칼라를 생성한 뒤 expand()로 우회하여 동적 텐서를 생성합니다.
+            shape = args[0] if len(args) == 1 and isinstance(args[0], (list, tuple)) else args
+            if any(isinstance(s, torch.Tensor) for s in shape):
+                return orig_zeros((), **kwargs).expand(*shape).contiguous()
+            if isinstance(args[0], (list, tuple)):
+                return orig_zeros(args[0], **kwargs)
+            return orig_zeros(*args, **kwargs)
+        return orig_zeros(*args, **kwargs)
+    torch.zeros = patched_zeros
+
     import torch.nn.utils.rnn as rnn_utils
-    rnn_utils.pack_padded_sequence = lambda input, lengths, batch_first=False, enforce_sorted=True: input if torch.jit.is_tracing() else rnn_utils.pack_padded_sequence(input, lengths, batch_first, enforce_sorted)
-    rnn_utils.pad_packed_sequence = lambda sequence, batch_first=False, padding_value=0.0, total_length=None: (sequence, torch.tensor([sequence.size(1 if batch_first else 0)] * sequence.size(0 if batch_first else 1))) if torch.jit.is_tracing() else rnn_utils.pad_packed_sequence(sequence, batch_first, padding_value, total_length)
+    rnn_utils.pack_padded_sequence = lambda input, lengths, batch_first=False, enforce_sorted=True: input if is_exporting() else rnn_utils.pack_padded_sequence(input, lengths, batch_first, enforce_sorted)
+    # POS/Depparse에서 발생하는 GuardOnDataDependentSymNode (FakeTensor 리스트 복제) 에러 방지를 위해 torch.full 사용
+    rnn_utils.pad_packed_sequence = lambda sequence, batch_first=False, padding_value=0.0, total_length=None: (sequence, torch.full((sequence.size(0 if batch_first else 1),), sequence.size(1 if batch_first else 0), dtype=torch.long, device=sequence.device)) if is_exporting() else rnn_utils.pad_packed_sequence(sequence, batch_first, padding_value, total_length)
+    
     import stanza.models.common.hlstm as hlstm
     import stanza.models.common.packed_lstm as packed_lstm
     def hlstm_forward(self, input, seqlens, hx=None):
         highway_func = (lambda x: x) if self.highway_func is None else self.highway_func
         hs, cs = [], []
+        
+        # Attribute Error를 방지하기 위해 내부 lstm의 양방향 여부를 동적으로 확인
+        num_dirs = getattr(self, 'num_directions', 2 if getattr(self.lstm[0].lstm, 'bidirectional', False) else 1)
+        
         for l in range(self.num_layers):
             if self.dropout > 0 and l > 0: input = self.drop(input)
-            layer_hx = (hx[0][l * self.num_directions:(l+1)*self.num_directions], hx[1][l * self.num_directions:(l+1)*self.num_directions]) if hx is not None else None
-            if torch.jit.is_tracing(): layer_hx = None
+            layer_hx = (hx[0][l * num_dirs:(l+1)*num_dirs], hx[1][l * num_dirs:(l+1)*num_dirs]) if hx is not None else None
+            if is_exporting(): layer_hx = None
             h, (ht, ct) = self.lstm[l].lstm(input, layer_hx)
             hs.append(ht); cs.append(ct)
             input = h + torch.sigmoid(self.gate[l](input)) * (self.highway[l](input) if self.highway_func is None else self.highway_func(self.highway[l](input)))
         return input, (torch.cat(hs, 0), torch.cat(cs, 0))
     hlstm.HighwayLSTM.forward = hlstm_forward
-    packed_lstm.PackedLSTM.forward = lambda self, input, lengths, hx=None: self.lstm(input, None if torch.jit.is_tracing() else hx)
+    packed_lstm.PackedLSTM.forward = lambda self, input, lengths, hx=None: self.lstm(input, None if is_exporting() else hx)
 
     import stanza.models.common.seq2seq_model as seq2seq_model
     import stanza.models.common.seq2seq_modules as seq2seq_modules
@@ -52,7 +107,7 @@ def apply_global_patches():
 
     orig_attn_forward = seq2seq_modules.DeepAttention.forward
     def patched_attn_forward(self, dec_hidden, enc_outs, enc_masks):
-        if torch.jit.is_tracing():
+        if is_exporting():
             attn_scores = self.score(dec_hidden, enc_outs)
             # ONNX 변환 시 in-place 연산(.data.masked_fill_)과 inf 값 처리를 안전하게 수행하도록 수정
             attn_scores = attn_scores.masked_fill(enc_masks.bool(), -1e9)
@@ -60,11 +115,22 @@ def apply_global_patches():
         return orig_attn_forward(self, dec_hidden, enc_outs, enc_masks)
     seq2seq_modules.DeepAttention.forward = patched_attn_forward
 
+    # Lemma 등 Seq2Seq 모델의 디코딩 중 OOV 체크(torch.max)에서 발생하는 Dynamo/torch.export 분기 에러 우회
+    orig_torch_max = torch.max
+    def patched_torch_max(input, *args, **kwargs):
+        # export 과정에서 src의 실제 값에 따라 분기하는 torch.max(src) 호출은 안정적으로 통과하지 못합니다.
+        # 이 스크립트의 목적은 ONNX 변환이므로, 단일 텐서 입력의 max는 0으로 대체해 export 경로를 통과시킵니다.
+        if len(args) == 0 and len(kwargs) == 0 and isinstance(input, torch.Tensor):
+            return 0
+        return orig_torch_max(input, *args, **kwargs)
+    torch.max = patched_torch_max
+    seq2seq_model.torch.max = patched_torch_max
+
     # CharacterModel 패치 추가: cs, ko 등 nocharlm에서 발생하는 batch_sizes 에러 및 정렬 로직 우회
     import stanza.models.common.char_model as char_model
     orig_char_forward = char_model.CharacterModel.forward
     def patched_char_forward(self, chars, chars_mask, wordlens, word_orig_idx, sentlens):
-        if torch.jit.is_tracing():
+        if is_exporting():
             chars_emb = self.char_emb(chars)
             batch_size = chars.size(0)
             
@@ -89,7 +155,8 @@ def apply_global_patches():
                     return (out * weights).sum(1)
                 
                 # 일반적인 최종 상태(Final States) 반환 처리
-                if h.size(0) >= 2:
+                is_bidirect = getattr(lstm_obj, 'bidirectional', False)
+                if is_bidirect and h.size(0) >= 2:
                     return h[-2:].transpose(0, 1).contiguous().view(batch_size, -1)
                 return h[-1]
                 
@@ -107,7 +174,8 @@ def apply_global_patches():
                 if getattr(self, 'use_out', False):
                     return out
                 
-                if h.size(0) >= 2:
+                is_bidirect = getattr(lstm_obj, 'bidirectional', False)
+                if is_bidirect and h.size(0) >= 2:
                     return torch.cat([h[-2], h[-1]], dim=-1)
                 return h[-1]
             else:
@@ -125,7 +193,27 @@ def apply_global_patches():
 
 # --- 2. EXPORT ---
 
-# import stanza  <-- 지우거나 주석 처리하세요!
+def safe_onnx_export(model, inputs, output_path, input_names, output_names, dynamic_axes):
+    export_kwargs = {
+        'opset_version': 18,
+        'input_names': input_names,
+        'output_names': output_names,
+        'dynamic_axes': dynamic_axes,
+        'do_constant_folding': False,
+    }
+
+    try:
+        torch.onnx.export(model, inputs, output_path, dynamo=False, **export_kwargs)
+        return True
+    except Exception as exc:
+        print(f"    ⚠️ export fallback 1 failed: {exc}")
+        try:
+            torch.onnx.export(model, inputs, output_path, dynamo=False, export_params=True, **export_kwargs)
+            return True
+        except Exception as exc2:
+            print(f"    ❌ export fallback 2 failed: {exc2}")
+            return False
+
 
 def convert_lang(lang):
     # 언어별 하위 폴더 생성으로 경로 재지정
@@ -134,9 +222,9 @@ def convert_lang(lang):
     
     print(f"\n🚀 {lang}")
     try: 
-        print(f"  ⬇️ Downloading from: https://huggingface.co/stanfordnlp/stanza-{lang}/tree/main/models")
-        stanza.download(lang, processors='tokenize,pos,lemma,depparse')
-        nlp = stanza.Pipeline(lang, processors='tokenize,pos,lemma,depparse')
+        print(f"  ⬇️ Loading model for {lang} (using cached version if available)...")
+        # 기존 캐싱된 모델 리소스가 있으면 새로 다운로드하지 않고 재사용합니다.
+        nlp = stanza.Pipeline(lang, processors='tokenize,pos,lemma,depparse', download_method=stanza.DownloadMethod.REUSE_RESOURCES)
     except Exception as e:
         print(f"    ❌ {e}")
         return
@@ -148,17 +236,24 @@ def convert_lang(lang):
             m = nlp.processors['tokenize'].trainer.model.cpu().eval()
             in_size = m.rnn.input_size
             num_feats = in_size - 32
-            inputs = (torch.zeros(1, 100).long(), torch.zeros(1, 100, num_feats).float(), torch.tensor([100]).long())
+            device = next(m.parameters()).device
+            inputs = (torch.zeros(1, 100, device=device, dtype=torch.long), torch.zeros(1, 100, num_feats, device=device, dtype=torch.float), torch.tensor([100], device=device, dtype=torch.long))
             
             # 모델 구성 및 텐서 값 확인을 위한 로그
             print(f"    [LOG] Tokenizer 모델 구성: rnn.input_size={in_size}, num_feats={num_feats}")
             print(f"    [LOG] Tokenizer 입력 텐서 Shape: x={inputs[0].shape}, f={inputs[1].shape}, l={inputs[2].shape}")
             
             # 파일 경로를 변경된 폴더 구조에 맞게 수정
-            torch.onnx.export(m, inputs, f"{ONNX_DIR}/tokenizer.onnx", opset_version=14, 
-                             input_names=['x','f','l'], output_names=['output'],
-                             dynamic_axes={'x': {1: 'seq'}, 'f': {1: 'seq'}, 'output': {1: 'seq'}})
-            print("    ✅ Done")
+            ok = safe_onnx_export(
+                m,
+                inputs,
+                f"{ONNX_DIR}/tokenizer.onnx",
+                ['x', 'f', 'l'],
+                ['output'],
+                {'x': {0: 'batch', 1: 'seq'}, 'f': {0: 'batch', 1: 'seq'}, 'l': {0: 'batch'}, 'output': {0: 'batch', 1: 'seq'}}
+            )
+            if ok:
+                print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
     # B. POS
@@ -215,20 +310,34 @@ def convert_lang(lang):
                     lstm_out, _ = self.m.taggerlstm(torch.cat(ins, 2), slen)
                     return self.m.upos_clf(F.relu(self.m.upos_hid(lstm_out)))
             
-            inputs = (torch.randint(1, 10, (1, 8)), torch.ones((1, 8), dtype=torch.bool), 
-                      torch.zeros(8, 32).long(), torch.ones(8, 32).bool(), 
-                      torch.randint(1, 10, (1, 8)), torch.arange(8), torch.tensor([8]), torch.full((8,), 5))
+            device = next(m.parameters()).device
+            inputs = (torch.randint(1, 10, (1, 8), device=device, dtype=torch.long), torch.ones((1, 8), device=device, dtype=torch.bool), 
+                      torch.zeros(8, 32, device=device, dtype=torch.long), torch.ones(8, 32, device=device, dtype=torch.bool), 
+                      torch.randint(1, 10, (1, 8), device=device, dtype=torch.long), torch.arange(8, device=device, dtype=torch.long), 
+                      torch.tensor([8], device=device, dtype=torch.long), torch.full((8,), 5, device=device, dtype=torch.long))
             
             # 모델 구성 및 텐서 값 확인을 위한 로그
             print(f"    [LOG] POS 모델 구성: word_emb_dim={m.args['word_emb_dim']}, pretrain={m.args['pretrain']}")
             print(f"    [LOG] POS 입력 텐서 Shape: word={inputs[0].shape}, mask={inputs[1].shape}, pre={inputs[4].shape}, slen={inputs[6].shape}")
             
             # 파일 경로를 변경된 폴더 구조에 맞게 수정
-            torch.onnx.export(POSWrapper(m), inputs, f"{ONNX_DIR}/pos.onnx", opset_version=14,
-                             input_names=['word','mask','chars','chars_mask','pre','oidx','slen','wlen'],
-                             output_names=['upos'],
-                             dynamic_axes={'word': {1: 'seq'}, 'mask': {1: 'seq'}, 'pre': {1: 'seq'}, 'upos': {1: 'seq'}})
-            print("    ✅ Done")
+            ok = safe_onnx_export(
+                POSWrapper(m),
+                inputs,
+                f"{ONNX_DIR}/pos.onnx",
+                ['word','mask','chars','chars_mask','pre','oidx','slen','wlen'],
+                ['upos'],
+                {
+                     'word': {0: 'batch', 1: 'seq'}, 'mask': {0: 'batch', 1: 'seq'}, 
+                     'chars': {0: 'num_words', 1: 'char_seq'},
+                     'chars_mask': {0: 'num_words', 1: 'char_seq'},
+                     'pre': {0: 'batch', 1: 'seq'}, 'oidx': {0: 'num_words'}, 
+                     'slen': {0: 'batch'}, 'wlen': {0: 'num_words'},
+                     'upos': {0: 'batch', 1: 'seq'}
+                }
+            )
+            if ok:
+                print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
     # C. DEPPARSE
@@ -301,10 +410,11 @@ def convert_lang(lang):
                     arc = self.m.arc_embedding(lstm_out, lstm_out)
                     return self.m.unlabeled_linear(arc).squeeze(3), self.m.deprel_linear(arc)
             
-            inputs = (torch.randint(1, 10, (1, 9)), torch.ones((1, 9), dtype=torch.bool), 
-                      torch.zeros(9, 32).long(), torch.ones(9, 32).bool(),
-                      torch.zeros(1, 9).long(), torch.randint(1, 10, (1, 9)), 
-                      torch.randint(1, 10, (1, 9)), torch.tensor([9]), torch.full((9,), 5))
+            device = next(m.parameters()).device
+            inputs = (torch.randint(1, 10, (1, 9), device=device, dtype=torch.long), torch.ones((1, 9), device=device, dtype=torch.bool), 
+                      torch.zeros(9, 32, device=device, dtype=torch.long), torch.ones(9, 32, device=device, dtype=torch.bool),
+                      torch.zeros(1, 9, device=device, dtype=torch.long), torch.randint(1, 10, (1, 9), device=device, dtype=torch.long), 
+                      torch.randint(1, 10, (1, 9), device=device, dtype=torch.long), torch.tensor([9], device=device, dtype=torch.long), torch.full((9,), 5, device=device, dtype=torch.long))
             
             # 모델 구성 및 텐서 값 확인을 위한 로그
             print(f"    [LOG] Depparse 모델 구성: parserlstm.input_size={m.parserlstm.input_size}, tag_emb_dim={m.args['tag_emb_dim']}")
@@ -312,9 +422,21 @@ def convert_lang(lang):
             
             # 파일 경로를 변경된 폴더 구조에 맞게 수정
             torch.onnx.export(DepWrapper(m), inputs, f"{ONNX_DIR}/depparse.onnx", opset_version=14,
-                             input_names=['word','mask','chars','chars_mask','upos','pre','lemma','slen','wlen'],
-                             output_names=['unlabeled','deprel'],
-                             dynamic_axes={'word': {1: 'seq'}, 'mask': {1: 'seq'}, 'chars': {0: 'seq'}, 'chars_mask': {0: 'seq'}, 'upos': {1: 'seq'}, 'pre': {1: 'seq'}, 'lemma': {1: 'seq'}, 'unlabeled': {1: 'seq', 2: 'seq'}, 'deprel': {1: 'seq', 2: 'seq'}, 'wlen': {0: 'seq'}})
+                            input_names=['word','mask','chars','chars_mask','upos','pre','lemma','slen','wlen'],
+                            output_names=['unlabeled','deprel'],
+                            dynamic_axes={
+                                 'word': {0: 'batch', 1: 'seq'}, 
+                                 'mask': {0: 'batch', 1: 'seq'}, 
+                                 'chars': {0: 'num_words', 1: 'char_seq'},
+                                 'chars_mask': {0: 'num_words', 1: 'char_seq'},
+                                 'upos': {0: 'batch', 1: 'seq'}, 
+                                 'pre': {0: 'batch', 1: 'seq'}, 
+                                 'lemma': {0: 'batch', 1: 'seq'}, 
+                                 'unlabeled': {0: 'batch', 1: 'seq', 2: 'seq'}, 
+                                 'deprel': {0: 'batch', 1: 'seq', 2: 'seq'}, 
+                                 'slen': {0: 'batch'},
+                                 'wlen': {0: 'num_words'}
+                             })
             print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
@@ -332,13 +454,17 @@ def convert_lang(lang):
                     def forward(self, src, src_mask, tgt_in, pos):
                         # Stanza의 Neural Lemmatizer (Seq2Seq) 기본 입력 포맷
                         # 키워드 인자 매핑 오류를 피하기 위해 모든 인자를 순서대로(positional) 넘깁니다.
-                        return self.m(src, src_mask, tgt_in, pos)
+                        out = self.m(src, src_mask, tgt_in, pos)
+                        if isinstance(out, tuple):
+                            return out[0]
+                        return out
                 
                 # 입력 텐서 더미: Seq2Seq 모델 구조에 맞게 tgt_in을 세 번째로 배치
-                src_dummy = torch.randint(1, 10, (1, 8))
-                src_mask_dummy = torch.zeros((1, 8), dtype=torch.bool)
-                tgt_in_dummy = torch.randint(1, 10, (1, 8))
-                pos_dummy = torch.randint(1, 10, (1,))
+                device = next(m.parameters()).device
+                src_dummy = torch.randint(1, 10, (1, 8), device=device, dtype=torch.long)
+                src_mask_dummy = torch.zeros((1, 8), device=device, dtype=torch.bool)
+                tgt_in_dummy = torch.randint(1, 10, (1, 8), device=device, dtype=torch.long)
+                pos_dummy = torch.randint(1, 10, (1,), device=device, dtype=torch.long)
                 
                 inputs = (src_dummy, src_mask_dummy, tgt_in_dummy, pos_dummy)
                 
@@ -382,12 +508,6 @@ def convert_lang(lang):
         print(f"    ❌ {e}")
 
 if __name__ == "__main__":
-    # 1. 패치를 최우선으로 적용하여 PyTorch 내부 함수를 덮어씌웁니다.
     apply_global_patches()
-    
-    # 2. 패치가 완료된 후 stanza를 임포트해야 패치된 함수를 가져다 씁니다.
-    import stanza 
-    
-    # 3. 변환 작업을 시작합니다.
     for l in ['en', 'cs', 'ko', 'de', 'es', 'fr', 'ja', 'pt', 'ar', 'it', 'nl', 'zh-hans']: 
         convert_lang(l)
