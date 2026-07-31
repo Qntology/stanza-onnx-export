@@ -327,7 +327,7 @@ def convert_lang(lang):
             inputs = (torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), torch.ones((1, 6), device=device, dtype=torch.bool), 
                       torch.zeros(6, 16, device=device, dtype=torch.long), torch.ones(6, 16, device=device, dtype=torch.bool), 
                       torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), torch.arange(6, device=device, dtype=torch.long), 
-                      torch.tensor([6], device=device, dtype=torch.long), torch.full((6,), 5, device=device, dtype=torch.long))
+                      torch.tensor([6], device=device, dtype=torch.long), torch.full((6,), 16, device=device, dtype=torch.long))
             
             # 모델 구성 및 텐서 값 확인을 위한 로그
             print(f"    [LOG] POS 모델 구성: word_emb_dim={m.args['word_emb_dim']}, pretrain={m.args['pretrain']}")
@@ -431,7 +431,7 @@ def convert_lang(lang):
             inputs = (torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), torch.ones((1, 6), device=device, dtype=torch.bool), 
                       torch.zeros(6, 16, device=device, dtype=torch.long), torch.ones(6, 16, device=device, dtype=torch.bool),
                       torch.zeros(1, 6, device=device, dtype=torch.long), torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), 
-                      torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), torch.tensor([6], device=device, dtype=torch.long), torch.full((6,), 5, device=device, dtype=torch.long))
+                      torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), torch.tensor([6], device=device, dtype=torch.long), torch.full((6,), 16, device=device, dtype=torch.long))
             
             # 모델 구성 및 텐서 값 확인을 위한 로그
             print(f"    [LOG] Depparse 모델 구성: parserlstm.input_size={m.parserlstm.input_size}, tag_emb_dim={m.args['tag_emb_dim']}")
