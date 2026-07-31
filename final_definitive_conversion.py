@@ -193,23 +193,30 @@ def apply_global_patches():
 
 # --- 2. EXPORT ---
 
-def safe_onnx_export(model, inputs, output_path, input_names, output_names, dynamic_axes):
+def safe_onnx_export(model, inputs, output_path, input_names, output_names, dynamic_axes=None):
     export_kwargs = {
         'opset_version': 18,
         'input_names': input_names,
         'output_names': output_names,
-        'dynamic_axes': dynamic_axes,
         'do_constant_folding': False,
     }
+    if dynamic_axes is not None:
+        export_kwargs['dynamic_axes'] = dynamic_axes
 
     try:
         torch.onnx.export(model, inputs, output_path, dynamo=False, **export_kwargs)
         return True
+    except KeyboardInterrupt:
+        print("    ⚠️ export interrupted; skipping this model")
+        return False
     except Exception as exc:
         print(f"    ⚠️ export fallback 1 failed: {exc}")
         try:
             torch.onnx.export(model, inputs, output_path, dynamo=False, export_params=True, **export_kwargs)
             return True
+        except KeyboardInterrupt:
+            print("    ⚠️ export interrupted during fallback; skipping this model")
+            return False
         except Exception as exc2:
             print(f"    ❌ export fallback 2 failed: {exc2}")
             return False
@@ -237,20 +244,26 @@ def convert_lang(lang):
             in_size = m.rnn.input_size
             num_feats = in_size - 32
             device = next(m.parameters()).device
-            inputs = (torch.zeros(1, 100, device=device, dtype=torch.long), torch.zeros(1, 100, num_feats, device=device, dtype=torch.float), torch.tensor([100], device=device, dtype=torch.long))
+            inputs = (torch.zeros(1, 16, device=device, dtype=torch.long), torch.zeros(1, 16, num_feats, device=device, dtype=torch.float), torch.tensor([16], device=device, dtype=torch.long))
             
             # 모델 구성 및 텐서 값 확인을 위한 로그
             print(f"    [LOG] Tokenizer 모델 구성: rnn.input_size={in_size}, num_feats={num_feats}")
             print(f"    [LOG] Tokenizer 입력 텐서 Shape: x={inputs[0].shape}, f={inputs[1].shape}, l={inputs[2].shape}")
             
             # 파일 경로를 변경된 폴더 구조에 맞게 수정
+            dynamic_axes = {
+                'x': {0: 'batch', 1: 'seq'},
+                'f': {0: 'batch', 1: 'seq'},
+                'l': {0: 'batch'},
+                'output': {0: 'batch', 1: 'seq'},
+            }
             ok = safe_onnx_export(
                 m,
                 inputs,
                 f"{ONNX_DIR}/tokenizer.onnx",
                 ['x', 'f', 'l'],
                 ['output'],
-                {'x': {0: 'batch', 1: 'seq'}, 'f': {0: 'batch', 1: 'seq'}, 'l': {0: 'batch'}, 'output': {0: 'batch', 1: 'seq'}}
+                dynamic_axes
             )
             if ok:
                 print("    ✅ Done")
@@ -311,30 +324,34 @@ def convert_lang(lang):
                     return self.m.upos_clf(F.relu(self.m.upos_hid(lstm_out)))
             
             device = next(m.parameters()).device
-            inputs = (torch.randint(1, 10, (1, 8), device=device, dtype=torch.long), torch.ones((1, 8), device=device, dtype=torch.bool), 
-                      torch.zeros(8, 32, device=device, dtype=torch.long), torch.ones(8, 32, device=device, dtype=torch.bool), 
-                      torch.randint(1, 10, (1, 8), device=device, dtype=torch.long), torch.arange(8, device=device, dtype=torch.long), 
-                      torch.tensor([8], device=device, dtype=torch.long), torch.full((8,), 5, device=device, dtype=torch.long))
+            inputs = (torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), torch.ones((1, 6), device=device, dtype=torch.bool), 
+                      torch.zeros(6, 16, device=device, dtype=torch.long), torch.ones(6, 16, device=device, dtype=torch.bool), 
+                      torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), torch.arange(6, device=device, dtype=torch.long), 
+                      torch.tensor([6], device=device, dtype=torch.long), torch.full((6,), 5, device=device, dtype=torch.long))
             
             # 모델 구성 및 텐서 값 확인을 위한 로그
             print(f"    [LOG] POS 모델 구성: word_emb_dim={m.args['word_emb_dim']}, pretrain={m.args['pretrain']}")
             print(f"    [LOG] POS 입력 텐서 Shape: word={inputs[0].shape}, mask={inputs[1].shape}, pre={inputs[4].shape}, slen={inputs[6].shape}")
             
             # 파일 경로를 변경된 폴더 구조에 맞게 수정
+            dynamic_axes = {
+                'word': {0: 'batch', 1: 'seq'},
+                'mask': {0: 'batch', 1: 'seq'},
+                'chars': {0: 'num_words', 1: 'char_len'},
+                'chars_mask': {0: 'num_words', 1: 'char_len'},
+                'pre': {0: 'batch', 1: 'seq'},
+                'oidx': {0: 'num_words'},
+                'slen': {0: 'batch'},
+                'wlen': {0: 'num_words'},
+                'upos': {0: 'batch', 1: 'seq'},
+            }
             ok = safe_onnx_export(
                 POSWrapper(m),
                 inputs,
                 f"{ONNX_DIR}/pos.onnx",
                 ['word','mask','chars','chars_mask','pre','oidx','slen','wlen'],
                 ['upos'],
-                {
-                     'word': {0: 'batch', 1: 'seq'}, 'mask': {0: 'batch', 1: 'seq'}, 
-                     'chars': {0: 'num_words', 1: 'char_seq'},
-                     'chars_mask': {0: 'num_words', 1: 'char_seq'},
-                     'pre': {0: 'batch', 1: 'seq'}, 'oidx': {0: 'num_words'}, 
-                     'slen': {0: 'batch'}, 'wlen': {0: 'num_words'},
-                     'upos': {0: 'batch', 1: 'seq'}
-                }
+                dynamic_axes
             )
             if ok:
                 print("    ✅ Done")
@@ -411,33 +428,39 @@ def convert_lang(lang):
                     return self.m.unlabeled_linear(arc).squeeze(3), self.m.deprel_linear(arc)
             
             device = next(m.parameters()).device
-            inputs = (torch.randint(1, 10, (1, 9), device=device, dtype=torch.long), torch.ones((1, 9), device=device, dtype=torch.bool), 
-                      torch.zeros(9, 32, device=device, dtype=torch.long), torch.ones(9, 32, device=device, dtype=torch.bool),
-                      torch.zeros(1, 9, device=device, dtype=torch.long), torch.randint(1, 10, (1, 9), device=device, dtype=torch.long), 
-                      torch.randint(1, 10, (1, 9), device=device, dtype=torch.long), torch.tensor([9], device=device, dtype=torch.long), torch.full((9,), 5, device=device, dtype=torch.long))
+            inputs = (torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), torch.ones((1, 6), device=device, dtype=torch.bool), 
+                      torch.zeros(6, 16, device=device, dtype=torch.long), torch.ones(6, 16, device=device, dtype=torch.bool),
+                      torch.zeros(1, 6, device=device, dtype=torch.long), torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), 
+                      torch.randint(1, 10, (1, 6), device=device, dtype=torch.long), torch.tensor([6], device=device, dtype=torch.long), torch.full((6,), 5, device=device, dtype=torch.long))
             
             # 모델 구성 및 텐서 값 확인을 위한 로그
             print(f"    [LOG] Depparse 모델 구성: parserlstm.input_size={m.parserlstm.input_size}, tag_emb_dim={m.args['tag_emb_dim']}")
             print(f"    [LOG] Depparse 입력 텐서 Shape: word={inputs[0].shape}, mask={inputs[1].shape}, chars={inputs[2].shape}, chars_mask={inputs[3].shape}, upos={inputs[4].shape}, pre={inputs[5].shape}, lemma={inputs[6].shape}, slen={inputs[7].shape}, wlen={inputs[8].shape}")
             
             # 파일 경로를 변경된 폴더 구조에 맞게 수정
-            torch.onnx.export(DepWrapper(m), inputs, f"{ONNX_DIR}/depparse.onnx", opset_version=14,
-                            input_names=['word','mask','chars','chars_mask','upos','pre','lemma','slen','wlen'],
-                            output_names=['unlabeled','deprel'],
-                            dynamic_axes={
-                                 'word': {0: 'batch', 1: 'seq'}, 
-                                 'mask': {0: 'batch', 1: 'seq'}, 
-                                 'chars': {0: 'num_words', 1: 'char_seq'},
-                                 'chars_mask': {0: 'num_words', 1: 'char_seq'},
-                                 'upos': {0: 'batch', 1: 'seq'}, 
-                                 'pre': {0: 'batch', 1: 'seq'}, 
-                                 'lemma': {0: 'batch', 1: 'seq'}, 
-                                 'unlabeled': {0: 'batch', 1: 'seq', 2: 'seq'}, 
-                                 'deprel': {0: 'batch', 1: 'seq', 2: 'seq'}, 
-                                 'slen': {0: 'batch'},
-                                 'wlen': {0: 'num_words'}
-                             })
-            print("    ✅ Done")
+            dynamic_axes = {
+                'word': {0: 'batch', 1: 'seq'},
+                'mask': {0: 'batch', 1: 'seq'},
+                'chars': {0: 'num_words', 1: 'char_len'},
+                'chars_mask': {0: 'num_words', 1: 'char_len'},
+                'upos': {0: 'batch', 1: 'seq'},
+                'pre': {0: 'batch', 1: 'seq'},
+                'lemma': {0: 'batch', 1: 'seq'},
+                'slen': {0: 'batch'},
+                'wlen': {0: 'num_words'},
+                'unlabeled': {0: 'batch', 1: 'seq', 2: 'seq'},
+                'deprel': {0: 'batch', 1: 'seq', 2: 'seq'},
+            }
+            ok = safe_onnx_export(
+                DepWrapper(m),
+                inputs,
+                f"{ONNX_DIR}/depparse.onnx",
+                ['word','mask','chars','chars_mask','upos','pre','lemma','slen','wlen'],
+                ['unlabeled','deprel'],
+                dynamic_axes
+            )
+            if ok:
+                print("    ✅ Done")
         except Exception as e: print(f"    ❌ {e}")
 
     # D. LEMMA
@@ -461,20 +484,32 @@ def convert_lang(lang):
                 
                 # 입력 텐서 더미: Seq2Seq 모델 구조에 맞게 tgt_in을 세 번째로 배치
                 device = next(m.parameters()).device
-                src_dummy = torch.randint(1, 10, (1, 8), device=device, dtype=torch.long)
-                src_mask_dummy = torch.zeros((1, 8), device=device, dtype=torch.bool)
-                tgt_in_dummy = torch.randint(1, 10, (1, 8), device=device, dtype=torch.long)
+                src_dummy = torch.randint(1, 10, (1, 6), device=device, dtype=torch.long)
+                src_mask_dummy = torch.zeros((1, 6), device=device, dtype=torch.bool)
+                tgt_in_dummy = torch.randint(1, 10, (1, 6), device=device, dtype=torch.long)
                 pos_dummy = torch.randint(1, 10, (1,), device=device, dtype=torch.long)
                 
                 inputs = (src_dummy, src_mask_dummy, tgt_in_dummy, pos_dummy)
                 
                 print(f"    [LOG] Lemma 입력 텐서 Shape: src={inputs[0].shape}, src_mask={inputs[1].shape}, tgt_in={inputs[2].shape}, pos={inputs[3].shape}")
                 
-                torch.onnx.export(LemmaWrapper(m), inputs, f"{ONNX_DIR}/lemma.onnx", opset_version=14,
-                                 input_names=['src','src_mask','tgt_in','pos'],
-                                 output_names=['preds'],
-                                 dynamic_axes={'src': {0: 'batch', 1: 'seq'}, 'src_mask': {0: 'batch', 1: 'seq'}, 'tgt_in': {0: 'batch', 1: 'seq'}, 'pos': {0: 'batch'}, 'preds': {0: 'batch', 1: 'seq'}})
-                print("    ✅ Done")
+                dynamic_axes = {
+                    'src': {0: 'batch', 1: 'seq'},
+                    'src_mask': {0: 'batch', 1: 'seq'},
+                    'tgt_in': {0: 'batch', 1: 'seq'},
+                    'pos': {0: 'batch'},
+                    'preds': {0: 'batch', 1: 'seq'},
+                }
+                ok = safe_onnx_export(
+                    LemmaWrapper(m),
+                    inputs,
+                    f"{ONNX_DIR}/lemma.onnx",
+                    ['src','src_mask','tgt_in','pos'],
+                    ['preds'],
+                    dynamic_axes
+                )
+                if ok:
+                    print("    ✅ Done")
             else:
                 print("    ⚠️ Rule-based/Dictionary Lemmatizer (No PyTorch model to export)")
         except Exception as e: print(f"    ❌ {e}")
@@ -509,5 +544,8 @@ def convert_lang(lang):
 
 if __name__ == "__main__":
     apply_global_patches()
-    for l in ['en', 'cs', 'ko', 'de', 'es', 'fr', 'ja', 'pt', 'ar', 'it', 'nl', 'zh-hans']: 
-        convert_lang(l)
+    for l in ['en', 'cs', 'ko', 'de', 'es', 'fr', 'ja', 'pt', 'ar', 'it', 'nl', 'zh-hans']:
+        try:
+            convert_lang(l)
+        except BaseException as e:
+            print(f"⚠️ {l} failed during conversion: {e}")
