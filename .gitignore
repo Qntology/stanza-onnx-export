@@ -5,3 +5,8 @@
 
 /target
 target/
+# 변환기가 만드는 큰 사전 (vocab.json 이 이름을 적어 둡니다)
+onnx_final/*/pretrain_vocab.json
+onnx_final/*/lemma_dict.json
+onnx_final/*/mwt_dict.json
+onnx_final/*/tokenize_lexicon.json
