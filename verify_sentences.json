@@ -1,0 +1,357 @@
+{
+  "note": "ONNX 변환 대조용 원문. general 은 일반 문장, query 는 검색 질의(en · ko 는 발전소 · 데이터센터 관제, 그 밖의 언어는 커머스 · 무역), trade_commerce 는 en · ko 의 커머스 · 무역 질의입니다. verify_onnx.py 는 원문을 그대로 토크나이저에 넣고 stanza 전체 파이프라인(tokenize[,mwt],pos,lemma,depparse)과 비교합니다.",
+  "en": {
+    "general": [
+      "The quick brown fox jumps over the lazy dog .",
+      "She was reading a book about ancient history when the phone rang .",
+      "Researchers at the university published their findings yesterday .",
+      "I would like to book two tickets for the evening show .",
+      "The committee has not yet decided whether the project will continue .",
+      "Prices rose sharply after the company announced lower production .",
+      "Children were playing in the park while their parents talked .",
+      "He quickly realized that the keys had been left inside the car .",
+      "The new bridge connects the island to the mainland .",
+      "Many workers in the factories joined the strike last week ."
+    ],
+    "query": [
+      "valves on floor 2 of building 103",
+      "main feedwater flow control valve 1 hop upstream",
+      "building 105 valve ID fan",
+      "pending MOC",
+      "pumps with high discharge pressure",
+      "stuck valves in the feedwater building",
+      "superheater outlet temperature sensors above 600 degrees",
+      "procedures for bearing vibration",
+      "show me the drawings of the boiler building",
+      "which fans are running in the basement",
+      "sensors in alarm",
+      "boiler feed pump",
+      "induced draft fans",
+      "temperature rising on the reheater",
+      "approved changes to the alarm limits",
+      "GPU racks with high junction temperature",
+      "chilled water pumps in the cooling plant",
+      "batteries that are overheating",
+      "flow is dropping at the bypass valve",
+      "find equipment downstream of the deaerator"
+    ],
+    "trade_commerce": [
+      "beige cardigans under 50 dollars",
+      "orders that were cancelled last week",
+      "track the parcel with number 123456789",
+      "coupons expiring this month",
+      "reviews complaining about poor quality",
+      "products that help me cool off on a hot day",
+      "bill of lading for the shipment at the port",
+      "commercial invoice for the supplier's order",
+      "certificate of origin of the goods",
+      "packing list with the weight of the boxes",
+      "find document number BL-2024-0012",
+      "insurance policy for the cargo",
+      "refunds to customers last month",
+      "don't show cancelled orders"
+    ]
+  },
+  "ko": {
+    "general": [
+      "오늘 아침에 친구와 함께 공원을 산책했다 .",
+      "그는 도서관에서 오래된 역사책을 빌려 읽었다 .",
+      "회의는 예정보다 한 시간 늦게 시작되었다 .",
+      "아이들이 운동장에서 즐겁게 뛰어놀고 있다 .",
+      "정부는 새로운 교통 정책을 다음 달부터 시행한다고 밝혔다 .",
+      "비가 많이 와서 경기가 취소되었다 .",
+      "이 식당의 음식은 맛있지만 가격이 조금 비싸다 .",
+      "연구진은 실험 결과를 국제 학술지에 발표했다 .",
+      "어머니께서 시장에서 사과와 배를 사 오셨다 .",
+      "그 영화는 많은 사람들에게 깊은 감동을 주었다 ."
+    ],
+    "query": [
+      "103동 2층 밸브",
+      "급수펌프의 토출 압력이 높은 밸브를 찾아줘",
+      "주급수 유량조절밸브 상류 1홉",
+      "105동 밸브 유인통풍기",
+      "승인 대기 MOC",
+      "과열기 출구 온도가 600도 이상인 센서",
+      "보일러동 지하 출구온도 비정상 과열기",
+      "고착된 밸브를 보여줘",
+      "유량이 낮은 급수 계통",
+      "베어링 진동 절차서",
+      "105동 도면을 열어줘",
+      "압력이 높은 급수펌프",
+      "물 공급 펌프",
+      "보일러에 물을 보내는 펌프",
+      "증기 온도가 너무 높은 설비",
+      "경보 상태인 센서",
+      "탈기기 하류에 있는 설비",
+      "냉각수 펌프와 우회밸브",
+      "배터리 셀 온도가 올라가는 랙",
+      "고착 아닌 밸브"
+    ],
+    "trade_commerce": [
+      "5만원 이하 베이지 가디건",
+      "지난주에 취소된 주문",
+      "운송장 번호 123456789 배송 조회",
+      "이번 달에 만료되는 쿠폰",
+      "품질이 나쁘다는 불만 리뷰",
+      "더위를 식히는 데 도움이 되는 제품",
+      "항구에 도착한 화물의 선하증권",
+      "공급업체 주문에 대한 상업송장",
+      "물품의 원산지증명서",
+      "상자 무게가 적힌 포장명세서",
+      "문서번호 BL-2024-0012 찾아줘",
+      "화물 적하보험증권",
+      "지난달 고객 환불 내역",
+      "여름 프로모션 할인 쿠폰"
+    ]
+  },
+  "de": {
+    "general": [
+      "Der schnelle braune Fuchs springt über den faulen Hund.",
+      "Die Firma hat im letzten Jahr ihren Umsatz deutlich gesteigert.",
+      "Wir fahren am Wochenende zum Bahnhof und dann weiter nach Berlin.",
+      "Die Kinder spielten im Garten, während die Eltern kochten.",
+      "Der Bericht wurde gestern vom Ausschuss veröffentlicht."
+    ],
+    "query": [
+      "beige Strickjacken unter 50 Euro",
+      "Bestellungen, die letzte Woche storniert wurden",
+      "Sendungsverfolgung für das Paket mit der Nummer 123456789",
+      "Gutscheine, die diesen Monat ablaufen",
+      "Bewertungen mit Beschwerden über schlechte Qualität",
+      "Produkte zum Kühlen an heißen Tagen",
+      "Konnossement für die Lieferung im Hafen",
+      "Handelsrechnung zur Bestellung beim Lieferanten",
+      "Ursprungszeugnis der Ware",
+      "Packliste mit Gewicht und Anzahl der Kisten",
+      "Dokument mit der Nummer BL-2024-0012 finden",
+      "Versicherungspolice für Schäden beim Transport",
+      "Rückerstattungen an Kunden im letzten Monat",
+      "Rabatte zum Sommerschlussverkauf"
+    ]
+  },
+  "es": {
+    "general": [
+      "El rápido zorro marrón salta sobre el perro perezoso.",
+      "La empresa aumentó sus ventas durante el último año.",
+      "Vamos al mercado del centro para comprar fruta.",
+      "Los niños jugaban en el parque mientras sus padres hablaban.",
+      "El informe fue publicado ayer por el comité."
+    ],
+    "query": [
+      "chaquetas de punto beige por menos de 50 euros",
+      "pedidos cancelados la semana pasada",
+      "seguimiento del paquete con el número 123456789",
+      "cupones que caducan este mes",
+      "reseñas con quejas sobre la mala calidad del producto",
+      "productos para refrescarse en un día caluroso",
+      "conocimiento de embarque del envío al puerto",
+      "factura comercial del pedido al proveedor",
+      "certificado de origen de la mercancía",
+      "lista de empaque con el peso de las cajas",
+      "búscame el documento número BL-2024-0012",
+      "póliza de seguro de la carga",
+      "muéstrame los reembolsos del mes pasado",
+      "descuentos de la campaña de verano"
+    ]
+  },
+  "fr": {
+    "general": [
+      "Le renard brun rapide saute par-dessus le chien paresseux.",
+      "L'entreprise a augmenté ses ventes au cours de l'année dernière.",
+      "Nous allons au marché du centre-ville pour acheter des légumes.",
+      "Les enfants jouaient dans le jardin pendant que leurs parents parlaient.",
+      "Le rapport a été publié hier par le comité."
+    ],
+    "query": [
+      "gilets beiges à moins de 50 euros",
+      "commandes annulées la semaine dernière",
+      "suivi du colis avec le numéro 123456789",
+      "coupons qui expirent ce mois-ci",
+      "avis des clients avec des plaintes sur la qualité",
+      "produits pour se rafraîchir pendant les jours de canicule",
+      "connaissement de l'expédition au port",
+      "facture commerciale de la commande du fournisseur",
+      "certificat d'origine des marchandises",
+      "liste de colisage avec le poids des cartons",
+      "trouve le document numéro BL-2024-0012",
+      "police d'assurance pour la cargaison",
+      "remboursements aux clients du mois dernier",
+      "réductions de la campagne d'été"
+    ]
+  },
+  "it": {
+    "general": [
+      "La veloce volpe marrone salta sopra il cane pigro.",
+      "L'azienda ha aumentato le vendite nel corso dell'ultimo anno.",
+      "Andiamo al mercato del centro per comprare la frutta.",
+      "I bambini giocavano nel parco mentre i genitori parlavano.",
+      "Il rapporto è stato pubblicato ieri dal comitato."
+    ],
+    "query": [
+      "cardigan beige sotto i 50 euro",
+      "ordini annullati la settimana scorsa",
+      "tracciamento del pacco con il numero 123456789",
+      "coupon che scadono questo mese",
+      "recensioni con lamentele sulla qualità del prodotto",
+      "prodotti per rinfrescarsi nelle giornate calde",
+      "polizza di carico della spedizione al porto",
+      "fattura commerciale dell'ordine al fornitore",
+      "certificato di origine della merce",
+      "distinta di imballaggio con il peso delle casse",
+      "trova il documento numero BL-2024-0012",
+      "polizza assicurativa sul carico",
+      "rimborsi ai clienti del mese scorso",
+      "sconti della campagna estiva"
+    ]
+  },
+  "pt": {
+    "general": [
+      "A rápida raposa marrom pula sobre o cão preguiçoso.",
+      "A empresa aumentou as vendas no último ano.",
+      "Vamos ao mercado do centro para comprar frutas.",
+      "As crianças brincavam no parque enquanto os pais conversavam.",
+      "O relatório foi publicado ontem pelo comitê."
+    ],
+    "query": [
+      "casacos de malha bege por menos de 50 euros",
+      "pedidos cancelados na semana passada",
+      "rastreamento do pacote com o número 123456789",
+      "cupons que vencem neste mês",
+      "avaliações com reclamações sobre a qualidade do produto",
+      "produtos para se refrescar nos dias quentes",
+      "conhecimento de embarque da remessa no porto",
+      "fatura comercial do pedido ao fornecedor",
+      "certificado de origem da mercadoria",
+      "lista de embalagem com o peso das caixas",
+      "encontre o documento número BL-2024-0012",
+      "apólice de seguro da carga",
+      "reembolsos aos clientes do mês passado",
+      "descontos da campanha de verão"
+    ]
+  },
+  "nl": {
+    "general": [
+      "De snelle bruine vos springt over de luie hond.",
+      "Het bedrijf heeft vorig jaar de omzet flink verhoogd.",
+      "We gaan naar de markt in het centrum om fruit te kopen.",
+      "De kinderen speelden in het park terwijl hun ouders praatten.",
+      "Het rapport is gisteren door de commissie gepubliceerd."
+    ],
+    "query": [
+      "beige vesten onder de 50 euro",
+      "bestellingen die vorige week zijn geannuleerd",
+      "track en trace van het pakket met nummer 123456789",
+      "kortingsbonnen die deze maand verlopen",
+      "beoordelingen met klachten over slechte kwaliteit",
+      "producten om af te koelen op een warme dag",
+      "cognossement van de zending in de haven",
+      "handelsfactuur van de bestelling bij de leverancier",
+      "certificaat van oorsprong van de goederen",
+      "paklijst met het gewicht van de dozen",
+      "zoek document nummer BL-2024-0012",
+      "verzekeringspolis voor de lading",
+      "terugbetalingen aan klanten van vorige maand",
+      "kortingen van de zomeractie"
+    ]
+  },
+  "cs": {
+    "general": [
+      "Rychlá hnědá liška skáče přes líného psa.",
+      "Firma loni výrazně zvýšila své tržby.",
+      "Jdeme na trh v centru, abychom koupili ovoce.",
+      "Děti si hrály v parku, zatímco rodiče mluvili.",
+      "Zprávu včera zveřejnil výbor."
+    ],
+    "query": [
+      "béžové svetry do 1000 korun",
+      "objednávky zrušené minulý týden",
+      "sledování zásilky s číslem 123456789",
+      "slevové kupóny, které vyprší tento měsíc",
+      "recenze se stížnostmi na špatnou kvalitu",
+      "výrobky na ochlazení v horkých dnech",
+      "konosament zásilky v přístavu",
+      "obchodní faktura k objednávce od dodavatele",
+      "osvědčení o původu zboží",
+      "balicí list s hmotností krabic",
+      "najdi dokument číslo BL-2024-0012",
+      "pojistná smlouva na náklad",
+      "vrácení peněz zákazníkům za minulý měsíc",
+      "slevy z letní akce"
+    ]
+  },
+  "ar": {
+    "general": [
+      "قفز الثعلب البني السريع فوق الكلب الكسول.",
+      "زادت الشركة مبيعاتها خلال العام الماضي.",
+      "ذهبنا إلى السوق لشراء الفواكه والخضروات.",
+      "كان الأطفال يلعبون في الحديقة بينما يتحدث آباؤهم.",
+      "نشرت اللجنة التقرير أمس."
+    ],
+    "query": [
+      "سترات صوفية بيج بأقل من 50 دولارا",
+      "الطلبات الملغاة في الأسبوع الماضي",
+      "تتبع الشحنة برقم 123456789",
+      "القسائم التي تنتهي صلاحيتها هذا الشهر",
+      "تقييمات العملاء التي تشكو من سوء الجودة",
+      "منتجات للتبريد في الأيام الحارة",
+      "بوليصة الشحن للبضاعة في الميناء",
+      "الفاتورة التجارية للطلب من المورد",
+      "شهادة المنشأ للبضائع",
+      "قائمة التعبئة مع وزن الصناديق",
+      "ابحث عن المستند رقم BL-2024-0012",
+      "وثيقة التأمين على الشحنة",
+      "المبالغ المستردة للعملاء في الشهر الماضي",
+      "خصومات حملة الصيف"
+    ]
+  },
+  "ja": {
+    "general": [
+      "素早い茶色の狐がのろまな犬を飛び越えた。",
+      "会社は昨年売上を大きく伸ばした。",
+      "週末に駅前の市場で果物を買いました。",
+      "子供たちは公園で遊び、親たちは話をしていた。",
+      "委員会は昨日報告書を発表した。"
+    ],
+    "query": [
+      "5000円以下のベージュのカーディガン",
+      "先週キャンセルされた注文",
+      "追跡番号123456789の荷物",
+      "今月期限が切れるクーポン",
+      "品質が悪いという苦情のレビュー",
+      "暑い日に体を冷やす商品",
+      "港での貨物の船荷証券",
+      "仕入先への注文の商業送り状",
+      "商品の原産地証明書",
+      "箱の重量が書かれた梱包明細書",
+      "文書番号BL-2024-0012を探して",
+      "貨物の保険証券",
+      "先月の顧客への返金",
+      "夏のキャンペーンの割引"
+    ]
+  },
+  "zh-hans": {
+    "general": [
+      "敏捷的棕色狐狸跳过了懒狗。",
+      "公司去年的销售额大幅增长。",
+      "周末我们去市中心的市场买水果。",
+      "孩子们在公园里玩耍，父母在聊天。",
+      "委员会昨天发布了报告。"
+    ],
+    "query": [
+      "五百元以下的米色开衫",
+      "上周取消的订单",
+      "运单号123456789的包裹",
+      "本月到期的优惠券",
+      "抱怨质量差的评论",
+      "炎热天气降温的商品",
+      "港口货物的提单",
+      "给供应商的订单商业发票",
+      "货物的原产地证明",
+      "注明箱子重量的装箱单",
+      "查找文件编号BL-2024-0012",
+      "货物的保险单",
+      "上个月给客户的退款",
+      "夏季促销的折扣"
+    ]
+  }
+}
